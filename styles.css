@@ -9,3 +9,48 @@
 body.money-hidden .home-balance-value,body.money-hidden .home-balance-breakdown strong,body.money-hidden #balance-total,body.money-hidden #expense-total,body.money-hidden #income-total,body.money-hidden .transaction-amount,body.money-hidden .legend-value,body.money-hidden .summary-value,body.money-hidden .chart-center strong{font-size:0!important;letter-spacing:0!important;color:transparent!important}body.money-hidden .home-balance-value:after{content:"••••••";font-size:32px;letter-spacing:2px;color:white}body.money-hidden .home-balance-breakdown strong:after{content:"••••";font-size:16px;letter-spacing:1px;color:white}body.money-hidden #balance-total:after,body.money-hidden #expense-total:after,body.money-hidden #income-total:after,body.money-hidden .transaction-amount:after,body.money-hidden .legend-value:after,body.money-hidden .summary-value:after,body.money-hidden .chart-center strong:after{content:"••••••";font-size:18px;letter-spacing:1px;color:var(--ink)}
 body.money-hidden .insight-item p{color:transparent!important;position:relative}body.money-hidden .insight-item p:after{content:"Valores ocultos";position:absolute;left:0;top:0;color:var(--muted)}
 @media(max-width:700px){.home-screen{padding-top:0;padding-bottom:105px;min-height:calc(100vh - 90px)}.home-heading{align-items:flex-start;flex-direction:column;gap:13px}.home-brandline{width:100%;justify-content:space-between}.home-month{align-self:flex-start}.home-balance-card{padding:18px 19px;margin-bottom:19px}.home-balance-value{font-size:32px}.home-shortcuts{gap:10px}.home-shortcut{min-height:105px}.customizer-card{padding:19px 16px}.customizer-heading h2{font-size:21px}.customizer-actions .button{flex:1;padding:0 9px}.home-bottom-nav{margin-top:18px}}
+
+/* Stage 2: transaction screens */
+body.legacy-transactions .legacy-content .page-heading,body.legacy-search .legacy-content .page-heading{align-items:center;margin-bottom:18px}
+body.legacy-transactions .legacy-content .page-heading h1,body.legacy-search .legacy-content .page-heading h1{font-size:27px}
+body.legacy-transactions .legacy-content .page-heading .eyebrow,body.legacy-search .legacy-content .page-heading .eyebrow{color:var(--blue)}
+body.legacy-transactions .legacy-content .summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+body.legacy-transactions .legacy-content .filter-row,body.legacy-search .legacy-content .filter-row{background:white;border:1px solid #e0e9f2;border-radius:16px;box-shadow:0 3px 12px #153d6209}
+body.legacy-transactions .legacy-content .content-grid{grid-template-columns:minmax(0,1fr)}
+body.legacy-transactions .legacy-content .side-column{display:none}
+body.legacy-transactions .legacy-content .transactions-panel{border-radius:17px}
+body.legacy-search .legacy-content .summary-grid,body.legacy-search .legacy-content .content-grid .side-column{display:none}
+body.legacy-search .legacy-content .filter-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:end}
+body.legacy-search .legacy-content .filter-row .search-box{grid-column:1/-1;grid-row:auto;width:100%}
+body.legacy-search .legacy-content .content-grid{grid-template-columns:minmax(0,1fr)}
+body.legacy-search .legacy-content .transactions-panel{border-radius:17px}
+.transaction-dialog{border:0;padding:0;border-radius:22px;width:min(540px,calc(100% - 30px));max-width:540px;max-height:min(90dvh,850px);box-shadow:0 24px 80px #0b2c4a40;overflow:auto}
+.transaction-dialog::backdrop{background:#08213bb0;backdrop-filter:blur(4px)}
+.transaction-dialog form{padding:27px;background:#fff}
+.transaction-dialog .dialog-heading{margin-bottom:22px}
+.transaction-dialog .dialog-heading h2{font-size:25px;letter-spacing:-.7px}
+.transaction-dialog .type-toggle{background:#edf3f9;border-radius:13px;padding:4px;margin-bottom:22px}
+.transaction-dialog .type-option{height:44px;border-radius:10px;font-size:13px}
+.transaction-dialog .type-option.selected[data-type="expense"]{background:#ffeaeb;color:#d93643;box-shadow:none}
+.transaction-dialog .type-option.selected[data-type="income"]{background:#dcf8eb;color:#128653;box-shadow:none}
+.transaction-dialog .amount-entry{border-radius:13px;background:#f8fbfe;border-color:#dfe9f3}
+.transaction-dialog .amount-entry input{background:transparent}
+.transaction-dialog .field input,.transaction-dialog .field select{height:46px;border-radius:11px;background:#fbfdff;border-color:#dfe8f1;font-size:13px}
+.transaction-dialog .field label{color:#28435d;font-size:12px}
+.transaction-dialog .dialog-actions{position:sticky;bottom:-27px;background:#fff;padding:14px 0 2px;margin:15px 0 0;border-top:1px solid #edf1f5}
+.transaction-dialog #save-button{min-width:175px;background:var(--blue)}
+.transaction-dialog .type-option.selected[data-type="expense"]~.x{color:var(--red)}
+@media(max-width:700px){
+ body.legacy-transactions .legacy-content .summary-grid{grid-template-columns:1fr 1fr}
+ body.legacy-transactions .legacy-content .balance-card{grid-column:1/-1}
+ body.legacy-transactions .legacy-content .filter-row{grid-template-columns:1fr 1fr}
+ body.legacy-transactions .legacy-content .filter-row .search-box{grid-column:1/-1;grid-row:1}
+ body.legacy-search .legacy-content .filter-row{grid-template-columns:1fr 1fr;padding:13px}
+ body.legacy-search .legacy-content .filter-row .search-box{grid-column:1/-1;grid-row:1}
+ .transaction-dialog{width:100%;max-width:none;max-height:100dvh;height:100dvh;border-radius:0;margin:0}
+ .transaction-dialog form{min-height:100%;padding:calc(22px + env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom));display:flex;flex-direction:column}
+ .transaction-dialog .dialog-heading h2{font-size:24px}
+ .transaction-dialog .form-grid{grid-template-columns:1fr}
+ .transaction-dialog .dialog-actions{margin-top:auto;bottom:0;padding-top:15px}
+ .transaction-dialog #save-button{flex:1}
+}
