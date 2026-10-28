@@ -41,7 +41,7 @@
           <h2>Entre no seu espaço</h2>
           <p>Use sua Conta Google para acessar suas informações financeiras.</p>
           <button id="google-sign-in" class="button google-button" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.23c0-.72-.06-1.42-.18-2.09H12v3.95h5.38a4.6 4.6 0 0 1-2 3.02v2.56h3.24c1.9-1.75 2.98-4.33 2.98-7.44z"/><path fill="#34A853" d="M12 22c2.7 0 4.97-.9 6.62-2.43l-3.24-2.56c-.9.6-2.04.96-3.38.96-2.6 0-4.8-1.76-5.59-4.13H3.06v2.64A10 10 0 0 0 12 22z"/><path fill="#FBBC05" d="M6.41 13.84a6.03 6.03 0 0 1 0-3.68V7.52H3.06a10 10 0 0 0 0 8.96z"/><path fill="#EA4335" d="M12 6.03c1.47 0 2.79.5 3.82 1.52l2.86-2.86C16.96 3.05 14.7 2 12 2a10 10 0 0 0-8.94 5.52l3.35 2.64C7.2 7.79 9.4 6.03 12 6.03z"/></svg> Continuar com Google</button>
-          <button id="demo-sign-in" class="button button-quiet" style="width:100%;margin-top:10px" type="button">Testar sem login</button>
+          <button id="demo-sign-in" class="button button-quiet" style="width:100%;margin-top:10px" type="button" onclick="if(window.startMeuBolsoDemo){window.startMeuBolsoDemo()}else{const e=document.getElementById('login-error');e.textContent='O código de demonstração não carregou. Atualize a página e tente novamente.';e.classList.remove('hidden')}">Testar sem login</button>
           <p class="privacy-note">Modo de demonstração: os registros ficam apenas neste navegador e não são sincronizados.</p>
           <p class="privacy-note"><span aria-hidden="true">▣</span> Seus dados são privados e vinculados à sua conta.</p>
           <p id="login-error" class="form-error hidden" role="alert"></p>
@@ -127,6 +127,6 @@
   <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
   <script src="./firebase-config.js"></script>
-  <script src="./app.js"></script>
+  <script src="./app-v2.js"></script>
 </body>
 </html>
