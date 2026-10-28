@@ -1,0 +1,20 @@
+{
+  "id": "./",
+  "name": "Meu Bolso — Controle financeiro",
+  "short_name": "Meu Bolso",
+  "description": "Controle pessoal de receitas, despesas e hábitos financeiros.",
+  "lang": "pt-BR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f7f4",
+  "theme_color": "#10241f",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
