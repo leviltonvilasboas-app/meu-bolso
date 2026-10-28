@@ -50,6 +50,15 @@
       </section>
 
       <section id="app-view" class="hidden">
+        <section id="home-screen" class="home-screen">
+          <div class="home-heading"><div class="home-brandline"><div><p class="eyebrow">SEU DINHEIRO, MAIS CLARO</p><h1>Visão geral</h1></div><button id="customize-home-button" class="icon-button" type="button" aria-label="Personalizar tela inicial" title="Personalizar tela inicial">☷</button></div><label class="home-month"><span>Período</span><input id="home-month-filter" type="month" aria-label="Mês do resumo"></label></div>
+          <section class="home-balance-card" aria-label="Resumo financeiro do mês"><div class="balance-card-top"><span>Saldo do mês</span><button id="toggle-balance-visibility" class="visibility-button" type="button" aria-label="Ocultar valores financeiros" aria-pressed="false" title="Ocultar ou mostrar valores"><svg id="eye-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div><strong id="home-balance-total" class="home-balance-value">R$ 0,00</strong><div class="home-balance-breakdown"><div><span>Receitas</span><strong id="home-income-total">R$ 0,00</strong></div><div><span>Despesas</span><strong id="home-expense-total">R$ 0,00</strong></div></div></section>
+          <div class="home-section-heading"><h2>Acesso rápido</h2><button id="edit-home-shortcuts" class="text-button" type="button">Personalizar</button></div><section id="home-shortcuts" class="home-shortcuts" aria-label="Atalhos da tela inicial"></section>
+          <nav class="home-bottom-nav" aria-label="Navegação principal"><button type="button" class="home-nav-item active" data-home-nav="home"><span>⌂</span>Início</button><button type="button" class="home-nav-item" data-home-nav="transactions"><span>☷</span>Movimentações</button><button type="button" class="home-nav-item" data-home-nav="reports"><span>◔</span>Relatórios</button><button type="button" class="home-nav-item" data-home-nav="more"><span>•••</span>Mais</button></nav>
+        </section>
+        <section id="shortcut-customizer" class="shortcut-customizer hidden" aria-labelledby="customizer-title"><div class="customizer-card"><div class="customizer-heading"><div><p class="eyebrow">PREFERÊNCIAS</p><h2 id="customizer-title">Personalizar tela inicial</h2><p class="muted">Escolha os atalhos que deseja ver. Todas as funções continuam disponíveis no menu.</p></div><button id="close-customizer" class="icon-button" type="button" aria-label="Fechar">×</button></div><div id="shortcut-options" class="shortcut-options"></div><div class="customizer-actions"><button id="cancel-customizer" class="button button-quiet" type="button">Cancelar</button><button id="save-customizer" class="button button-primary" type="button">Salvar preferências</button></div></div></section>
+        <section id="more-menu" class="more-menu hidden"><div class="panel"><div class="panel-heading"><div><h2>Mais opções</h2><p class="muted">Acesse outras áreas do Meu Bolso.</p></div></div><div class="more-menu-list"><button type="button" data-open-legacy="categories">Categorias e insights</button><button type="button" data-open-legacy="export">Exportar movimentações</button><button type="button" id="back-home-from-more">Voltar ao início</button></div></div></section>
+        <div id="legacy-content" class="legacy-content hidden">
         <div class="page-heading">
           <div><p class="eyebrow">SEU RESUMO</p><h1>Visão geral</h1><p class="muted" id="welcome-message">Acompanhe suas movimentações.</p></div>
           <button id="new-transaction-button" class="button button-primary" type="button"><span aria-hidden="true">＋</span> Nova movimentação</button>
@@ -89,7 +98,7 @@
           </section>
 
           <aside class="side-column">
-            <section class="panel category-panel">
+            <section id="category-panel" class="panel category-panel">
               <div class="panel-heading"><div><h2>Despesas por categoria</h2><p class="muted">Distribuição do mês</p></div></div>
               <div id="category-chart" class="category-chart"></div>
               <div id="category-legend" class="category-legend"></div>
@@ -101,6 +110,8 @@
           </aside>
         </div>
         <footer class="app-footer"><span>Meu Bolso</span><span>Dados atualizados conforme seus lançamentos.</span><button id="export-button" class="text-button" type="button">Exportar CSV</button></footer>
+
+        </div>
       </section>
     </main>
   </div>
