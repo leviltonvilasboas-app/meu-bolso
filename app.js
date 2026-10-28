@@ -209,7 +209,9 @@
     else if(error.code==="auth/operation-not-allowed") message="O provedor Google não está ativado no Firebase Authentication.";
     else if(error.code==="auth/network-request-failed") message="Sem conexão. Para entrar pela primeira vez, conecte-se à internet.";
     else if(error.code==="auth/web-storage-unsupported") message="O navegador bloqueou o armazenamento necessário ao login. Abra o Meu Bolso diretamente no Chrome.";
-    $("login-error").textContent=message;$("login-error").classList.remove("hidden");
+    console.error("Meu Bolso Google sign-in error:", error.code || "sem código", error.message || error);
+    const diagnosticCode=error && error.code ? " (Código: "+error.code+")" : "";
+    $("login-error").textContent=message+diagnosticCode;$("login-error").classList.remove("hidden");
   }
 
   async function signIn() {
