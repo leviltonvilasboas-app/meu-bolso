@@ -6,7 +6,7 @@
   const COLORS = ["#216e50", "#75a98a", "#d69a51", "#6c91a5", "#bd6b58", "#8c80b8", "#94aa60", "#4d9b9b", "#c17d9c", "#7d8a81"];
   const ICONS = {"Alimentação":"◉","Moradia":"⌂","Transporte":"↗","Saúde":"✚","Lazer":"✦","Compras":"▤","Família":"♡","Viagens":"✈","Educação":"▣","Contas e serviços":"≋","Assinaturas":"↻","Impostos e taxas":"▧","Pets":"♧","Salário":"＋","Renda extra":"↗","Investimentos":"⌁","Reembolso":"↩","Venda":"◇","Presente":"♡","Outros":"•"};
   const $ = (id) => document.getElementById(id);
-  const state = { user: null, transactions: [], unsubscribe: null, editingId: null, pendingWrites: false, deferredInstall: null, persistenceReady: false, persistencePromise: Promise.resolve(), demoMode: false };
+  const state = { user: null, transactions: [], unsubscribe: null, editingId: null, pendingWrites: false, deferredInstall: null, persistenceReady: false, persistencePromise: Promise.resolve(), demoMode: false, hiddenMoney: false, shortcutDraft: [] };
   const money = (cents) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format((Number(cents) || 0) / 100);
   const localDate = () => { const d = new Date(); return [d.getFullYear(), String(d.getMonth()+1).padStart(2,"0"), String(d.getDate()).padStart(2,"0")].join("-"); };
   const currentMonth = () => localDate().slice(0,7);
@@ -19,6 +19,17 @@
   const activeMonth = () => $("month-filter").value || currentMonth();
   const categoryOptions = (type, selected) => (type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map(c=>'<option value="'+escapeHTML(c)+'"'+(c===selected?' selected':'')+'>'+escapeHTML(c)+'</option>').join("");
 
+  const HOME_SHORTCUTS=[{id:"expense",label:"Lançar despesa",icon:"−",tone:"expense",action:"expense"},{id:"income",label:"Lançar receita",icon:"+",tone:"income",action:"income"},{id:"transactions",label:"Movimentações",icon:"☷",tone:"blue",action:"transactions"},{id:"search",label:"Buscar lançamento",icon:"⌕",tone:"purple",action:"search"},{id:"reports",label:"Relatórios",icon:"▥",tone:"blue",action:"reports"},{id:"categories",label:"Categorias",icon:"◇",tone:"slate",action:"categories"},{id:"budgets",label:"Orçamentos",icon:"◎",tone:"green",action:"budgets"},{id:"accounts",label:"Contas",icon:"▣",tone:"slate",action:"accounts"}];
+  const SHORTCUTS_KEY="meu-bolso-home-shortcuts-v1",HIDDEN_MONEY_KEY="meu-bolso-hidden-money-v1";
+  function selectedShortcuts(){try{const saved=JSON.parse(localStorage.getItem(SHORTCUTS_KEY)||'["expense","income","transactions","search"]');return HOME_SHORTCUTS.filter(item=>Array.isArray(saved)&&saved.includes(item.id));}catch(_){return HOME_SHORTCUTS.slice(0,4);}}
+  function renderHomeShortcuts(){const target=$("home-shortcuts");target.innerHTML=selectedShortcuts().map(item=>'<button type="button" class="home-shortcut" data-shortcut="'+item.action+'"><span class="shortcut-icon '+item.tone+'">'+item.icon+'</span><span>'+escapeHTML(item.label)+'</span></button>').join("");if(!target.children.length)target.innerHTML='<p class="shortcut-empty">Nenhum atalho selecionado. Use “Personalizar” para adicionar opções.</p>';}
+  function renderHomeSummary(){$("home-balance-total").textContent=$("balance-total").textContent;$("home-income-total").textContent=$("income-total").textContent;$("home-expense-total").textContent=$("expense-total").textContent;applyMoneyVisibility();}
+  function applyMoneyVisibility(){document.body.classList.toggle("money-hidden",state.hiddenMoney);const b=$("toggle-balance-visibility");if(!b)return;b.setAttribute("aria-pressed",String(state.hiddenMoney));b.setAttribute("aria-label",state.hiddenMoney?"Mostrar valores financeiros":"Ocultar valores financeiros");b.title=state.hiddenMoney?"Mostrar valores":"Ocultar valores";$("eye-icon").innerHTML=state.hiddenMoney?'<path d="M3 3l18 18M10.6 5.7A10.8 10.8 0 0 1 12 5.5c6.4 0 10 6.5 10 6.5s-1.1 2-3.2 3.7M6.2 6.2C3.5 8 2 12 2 12s3.6 6.5 10 6.5c1.5 0 2.8-.3 4-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>' : '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>';}
+  function openCustomizer(){state.shortcutDraft=selectedShortcuts().map(x=>x.id);renderCustomizerOptions();$("home-screen").classList.add("hidden");$("legacy-content").classList.add("hidden");$("more-menu").classList.add("hidden");$("shortcut-customizer").classList.remove("hidden");}
+  function renderCustomizerOptions(){$("shortcut-options").innerHTML=HOME_SHORTCUTS.map(item=>'<label class="shortcut-option"><span class="shortcut-option-icon '+item.tone+'">'+item.icon+'</span><span>'+escapeHTML(item.label)+'</span><input type="checkbox" data-shortcut-choice="'+item.id+'" '+(state.shortcutDraft.includes(item.id)?"checked":"")+'></label>').join("");}
+  function closeCustomizer(){$("shortcut-customizer").classList.add("hidden");$("home-screen").classList.remove("hidden");}
+  function showLegacy(section){$("home-screen").classList.add("hidden");$("shortcut-customizer").classList.add("hidden");$("more-menu").classList.add("hidden");$("legacy-content").classList.remove("hidden");if(section==="search"){$("search-filter").focus();$("search-filter").scrollIntoView({behavior:"smooth",block:"center"});}else if(section==="reports"||section==="categories")$("category-panel").scrollIntoView({behavior:"smooth",block:"start"});else if(section==="export")exportCSV();else $("legacy-content").scrollIntoView({behavior:"smooth",block:"start"});document.querySelectorAll("[data-home-nav]").forEach(b=>b.classList.toggle("active",b.dataset.homeNav===(section==="reports"?"reports":"transactions")));}
+  function showHome(){$("home-screen").classList.remove("hidden");$("shortcut-customizer").classList.add("hidden");$("more-menu").classList.add("hidden");$("legacy-content").classList.add("hidden");document.querySelectorAll("[data-home-nav]").forEach(b=>b.classList.toggle("active",b.dataset.homeNav==="home"));}
   function updateCategoryOptions(type, selected) {
     $("transaction-category").innerHTML = categoryOptions(type, selected || (type==="income" ? "Salário" : "Alimentação"));
     $("category-filter").innerHTML = '<option value="all">Todas as categorias</option>'+[...new Set([...EXPENSE_CATEGORIES,...INCOME_CATEGORIES])].map(c=>'<option value="'+escapeHTML(c)+'">'+escapeHTML(c)+'</option>').join("");
@@ -36,6 +47,7 @@
   function showApp(user) {
     $("auth-loading").classList.add("hidden");
     $("login-view").classList.add("hidden"); $("app-view").classList.remove("hidden");
+    showHome();
     $("sign-out-button").classList.remove("hidden");
     const name = (user.displayName || user.email || "Olá").split(" ")[0];
     $("welcome-message").textContent = state.demoMode
@@ -120,6 +132,7 @@
     $("empty-state").classList.toggle("show",shown.length===0); $("transactions-list").classList.toggle("hidden",shown.length===0);
     renderCategoryChart(expenses,expenseTotal);
     renderInsights(month,allInMonth,expenses,incomes,expenseTotal,incomeTotal,net);
+    renderHomeSummary();
   }
 
   function renderCategoryChart(expenses,total) {
@@ -302,7 +315,20 @@
   }
 
   function init() {
-    $("month-filter").value=currentMonth(); $("date-input").value=localDate(); updateCategoryOptions("expense");
+    $("month-filter").value=currentMonth(); $("date-input").value=localDate(); $("home-month-filter").value=currentMonth(); updateCategoryOptions("expense");
+    try{state.hiddenMoney=localStorage.getItem(HIDDEN_MONEY_KEY)==="true";}catch(_){}
+    renderHomeShortcuts();
+    $("home-month-filter").addEventListener("change",()=>{$("month-filter").value=$("home-month-filter").value;render();});
+    $("month-filter").addEventListener("change",()=>{$("home-month-filter").value=$("month-filter").value;render();});
+    $("toggle-balance-visibility").addEventListener("click",()=>{state.hiddenMoney=!state.hiddenMoney;try{localStorage.setItem(HIDDEN_MONEY_KEY,String(state.hiddenMoney));}catch(_){}applyMoneyVisibility();});
+    $("customize-home-button").addEventListener("click",openCustomizer);$("edit-home-shortcuts").addEventListener("click",openCustomizer);
+    $("close-customizer").addEventListener("click",closeCustomizer);$("cancel-customizer").addEventListener("click",closeCustomizer);
+    $("shortcut-options").addEventListener("change",event=>{const input=event.target.closest("[data-shortcut-choice]");if(!input)return;const id=input.dataset.shortcutChoice;state.shortcutDraft=input.checked?[...state.shortcutDraft.filter(x=>x!==id),id]:state.shortcutDraft.filter(x=>x!==id);});
+    $("save-customizer").addEventListener("click",()=>{try{localStorage.setItem(SHORTCUTS_KEY,JSON.stringify(state.shortcutDraft));}catch(_){}renderHomeShortcuts();closeCustomizer();showToast("Tela inicial personalizada.");});
+    $("home-shortcuts").addEventListener("click",event=>{const button=event.target.closest("[data-shortcut]");if(!button)return;const action=button.dataset.shortcut;if(action==="expense"||action==="income"){openDialog();$("transaction-type").value=action;document.querySelectorAll(".type-option").forEach(b=>b.classList.toggle("selected",b.dataset.type===action));updateCategoryOptions(action);$("dialog-title").textContent=action==="income"?"Lançar receita":"Lançar despesa";}else showLegacy(action);});
+    document.querySelectorAll("[data-home-nav]").forEach(button=>button.addEventListener("click",()=>{const nav=button.dataset.homeNav;if(nav==="home")showHome();else if(nav==="more"){$("home-screen").classList.add("hidden");$("more-menu").classList.remove("hidden");}else showLegacy(nav);}));
+    $("back-home-from-more").addEventListener("click",showHome);
+    document.querySelectorAll("[data-open-legacy]").forEach(button=>button.addEventListener("click",()=>showLegacy(button.dataset.openLegacy)));
     $("google-sign-in").addEventListener("click",signIn);
     $("sign-out-button").addEventListener("click",signOut);
     $("new-transaction-button").addEventListener("click",()=>openDialog());
