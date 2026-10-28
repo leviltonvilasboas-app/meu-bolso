@@ -295,7 +295,6 @@
   function init() {
     $("month-filter").value=currentMonth(); $("date-input").value=localDate(); updateCategoryOptions("expense");
     $("google-sign-in").addEventListener("click",signIn);
-    $("demo-sign-in").addEventListener("click",startDemoMode);
     $("sign-out-button").addEventListener("click",signOut);
     $("new-transaction-button").addEventListener("click",()=>openDialog());
     $("empty-add-button").addEventListener("click",()=>openDialog());
@@ -323,6 +322,9 @@
     $("install-button").addEventListener("click",async()=>{if(!state.deferredInstall)return;state.deferredInstall.prompt();await state.deferredInstall.userChoice;state.deferredInstall=null;$("install-button").classList.add("hidden");});
     window.addEventListener("appinstalled",()=>{$("install-button").classList.add("hidden");showToast("Meu Bolso instalado.");});
   }
+
+  // A demonstração local deve funcionar mesmo se o Firebase falhar ao iniciar.
+  $("demo-sign-in").addEventListener("click", startDemoMode);
 
   try {
     if(!window.MEU_BOLSO_FIREBASE_CONFIG || !window.MEU_BOLSO_FIREBASE_CONFIG.apiKey) throw new Error("Configuração do Firebase não encontrada.");
