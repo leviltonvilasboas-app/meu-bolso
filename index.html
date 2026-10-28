@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#10241f">
+  <meta name="description" content="Controle pessoal de despesas, receitas e hábitos financeiros.">
+  <title>Meu Bolso — Controle financeiro</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Meu Bolso - início">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M5 8.5A3.5 3.5 0 0 1 8.5 5H26v22H8.5A3.5 3.5 0 0 1 5 23.5z" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M5 10h17a4 4 0 0 1 4 4v4H17a4 4 0 0 1 0-8h9" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="18" cy="14" r="1.25" fill="currentColor"/></svg></span>
+        <span><strong>meu bolso</strong><small>controle financeiro</small></span>
+      </a>
+      <div class="header-actions">
+        <span id="connection-status" class="connection-status" aria-live="polite"><i></i><span>Iniciando…</span></span>
+        <button id="install-button" class="button button-quiet hidden" type="button">Instalar app</button>
+        <button id="sign-out-button" class="avatar-button hidden" type="button" aria-label="Sair da conta"><span id="user-initials">—</span></button>
+      </div>
+    </header>
+
+    <main>
+      <section id="login-view" class="login-view">
+        <div class="login-copy">
+          <p class="eyebrow">FINANÇAS DO SEU JEITO</p>
+          <h1>Seu dinheiro,<br><span>mais claro.</span></h1>
+          <p class="intro">Registre seus gastos, entenda seus hábitos e acompanhe o mês com informações que ajudam de verdade.</p>
+          <div class="login-points">
+            <div><span class="point-icon">↗</span><span><strong>Visão mensal</strong><small>Receitas, despesas e evolução</small></span></div>
+            <div><span class="point-icon">◎</span><span><strong>Insights práticos</strong><small>Seus números, sem complicação</small></span></div>
+            <div><span class="point-icon">⌁</span><span><strong>Seus registros sincronizados</strong><small>Celular e computador, com o mesmo login</small></span></div>
+          </div>
+        </div>
+        <div class="login-card">
+          <div class="login-card-logo">MB</div>
+          <h2>Entre no seu espaço</h2>
+          <p>Use sua Conta Google para acessar suas informações financeiras.</p>
+          <button id="google-sign-in" class="button google-button" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.23c0-.72-.06-1.42-.18-2.09H12v3.95h5.38a4.6 4.6 0 0 1-2 3.02v2.56h3.24c1.9-1.75 2.98-4.33 2.98-7.44z"/><path fill="#34A853" d="M12 22c2.7 0 4.97-.9 6.62-2.43l-3.24-2.56c-.9.6-2.04.96-3.38.96-2.6 0-4.8-1.76-5.59-4.13H3.06v2.64A10 10 0 0 0 12 22z"/><path fill="#FBBC05" d="M6.41 13.84a6.03 6.03 0 0 1 0-3.68V7.52H3.06a10 10 0 0 0 0 8.96z"/><path fill="#EA4335" d="M12 6.03c1.47 0 2.79.5 3.82 1.52l2.86-2.86C16.96 3.05 14.7 2 12 2a10 10 0 0 0-8.94 5.52l3.35 2.64C7.2 7.79 9.4 6.03 12 6.03z"/></svg> Continuar com Google</button>
+          <p class="privacy-note"><span aria-hidden="true">▣</span> Seus dados são privados e vinculados à sua conta.</p>
+          <p id="login-error" class="form-error hidden" role="alert"></p>
+        </div>
+      </section>
+
+      <section id="app-view" class="hidden">
+        <div class="page-heading">
+          <div><p class="eyebrow">SEU RESUMO</p><h1>Visão geral</h1><p class="muted" id="welcome-message">Acompanhe suas movimentações.</p></div>
+          <button id="new-transaction-button" class="button button-primary" type="button"><span aria-hidden="true">＋</span> Nova movimentação</button>
+        </div>
+
+        <div id="notice" class="notice hidden" role="status"></div>
+
+        <section class="summary-grid" aria-label="Resumo financeiro">
+          <article class="summary-card balance-card">
+            <div class="summary-card-top"><span>Saldo do mês</span><span class="summary-icon">↗</span></div>
+            <strong id="balance-total" class="summary-value">R$ 0,00</strong>
+            <small id="balance-subtitle">Receitas menos despesas</small>
+          </article>
+          <article class="summary-card">
+            <div class="summary-card-top"><span>Despesas</span><span class="summary-icon expense-icon">↘</span></div>
+            <strong id="expense-total" class="summary-value">R$ 0,00</strong>
+            <small id="expense-count">0 lançamentos</small>
+          </article>
+          <article class="summary-card">
+            <div class="summary-card-top"><span>Receitas</span><span class="summary-icon income-icon">↗</span></div>
+            <strong id="income-total" class="summary-value">R$ 0,00</strong>
+            <small id="income-count">0 lançamentos</small>
+          </article>
+        </section>
+
+        <section class="filter-row" aria-label="Filtros">
+          <div class="month-picker"><label for="month-filter">Período</label><input id="month-filter" type="month"></div>
+          <div class="search-box"><label for="search-filter">Buscar movimentação</label><input id="search-filter" type="search" placeholder="Descrição ou categoria"></div>
+          <div class="category-picker"><label for="category-filter">Categoria</label><select id="category-filter"><option value="all">Todas as categorias</option></select></div>
+        </section>
+
+        <div class="content-grid">
+          <section class="panel transactions-panel">
+            <div class="panel-heading"><div><h2>Movimentações</h2><p class="muted">Seus lançamentos no período selecionado</p></div><span id="transaction-count-badge" class="count-badge">0</span></div>
+            <div id="transactions-list" class="transactions-list"></div>
+            <div id="empty-state" class="empty-state"><div class="empty-illustration">＋</div><strong>Nenhuma movimentação por aqui</strong><p>Registre sua primeira despesa ou receita para começar.</p><button id="empty-add-button" class="button button-primary button-small" type="button">Adicionar lançamento</button></div>
+          </section>
+
+          <aside class="side-column">
+            <section class="panel category-panel">
+              <div class="panel-heading"><div><h2>Despesas por categoria</h2><p class="muted">Distribuição do mês</p></div></div>
+              <div id="category-chart" class="category-chart"></div>
+              <div id="category-legend" class="category-legend"></div>
+            </section>
+            <section class="panel insights-panel">
+              <div class="panel-heading"><div><h2>Insights do mês</h2><p class="muted">O que seus números mostram</p></div><span class="sparkle">✳</span></div>
+              <div id="insights-list" class="insights-list"></div>
+            </section>
+          </aside>
+        </div>
+        <footer class="app-footer"><span>Meu Bolso</span><span>Dados atualizados conforme seus lançamentos.</span><button id="export-button" class="text-button" type="button">Exportar CSV</button></footer>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="transaction-dialog" class="transaction-dialog">
+    <form id="transaction-form" method="dialog">
+      <div class="dialog-heading"><div><p class="eyebrow">MOVIMENTAÇÃO</p><h2 id="dialog-title">Nova movimentação</h2></div><button id="close-dialog-button" class="close-button" type="button" aria-label="Fechar">×</button></div>
+      <div class="type-toggle" role="group" aria-label="Tipo de movimentação"><button type="button" data-type="expense" class="type-option selected">Despesa</button><button type="button" data-type="income" class="type-option">Receita</button></div>
+      <input id="transaction-type" type="hidden" value="expense">
+      <div class="field amount-field"><label for="amount-input">Valor (R$)</label><div class="amount-entry"><span>R$</span><input id="amount-input" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0,00" required></div></div>
+      <div class="form-grid">
+        <div class="field"><label for="description-input">Descrição</label><input id="description-input" type="text" maxlength="100" placeholder="Ex.: supermercado" required></div>
+        <div class="field"><label for="date-input">Data</label><input id="date-input" type="date" required></div>
+        <div class="field"><label for="transaction-category">Categoria</label><select id="transaction-category" required></select></div>
+        <div class="field"><label for="payment-input">Forma de pagamento</label><select id="payment-input"><option value="Pix">Pix</option><option value="Crédito">Cartão de crédito</option><option value="Débito">Cartão de débito</option><option value="Dinheiro">Dinheiro</option><option value="Transferência">Transferência</option><option value="Boleto">Boleto</option><option value="Outro">Outro</option></select></div>
+      </div>
+      <div class="field hidden" id="card-name-field"><label for="card-name-input">Cartão (opcional)</label><input id="card-name-input" type="text" maxlength="50" placeholder="Ex.: Nubank"></div>
+      <div id="form-error" class="form-error hidden" role="alert"></div>
+      <div class="dialog-actions"><button id="cancel-button" class="button button-quiet" type="button">Cancelar</button><button id="save-button" class="button button-primary" type="submit">Salvar movimentação</button></div>
+    </form>
+  </dialog>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+  <script src="./firebase-config.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
