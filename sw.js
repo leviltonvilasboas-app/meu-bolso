@@ -1,10 +1,10 @@
-const CACHE_NAME = "meu-bolso-shell-v6";
+const CACHE_NAME = "meu-bolso-shell-v7";
 const SCOPE_URL = self.registration.scope;
 const APP_FILES = [
   new URL("index.html", SCOPE_URL).href,
   new URL("styles.css", SCOPE_URL).href,
   new URL("firebase-config.js", SCOPE_URL).href,
-  new URL("app.js", SCOPE_URL).href,
+  new URL("app-v2.js", SCOPE_URL).href,
   new URL("manifest.json", SCOPE_URL).href,
   new URL("icon.svg", SCOPE_URL).href
 ];
