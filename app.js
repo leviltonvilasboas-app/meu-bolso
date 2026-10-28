@@ -6,7 +6,7 @@
   const COLORS = ["#216e50", "#75a98a", "#d69a51", "#6c91a5", "#bd6b58", "#8c80b8", "#94aa60", "#4d9b9b", "#c17d9c", "#7d8a81"];
   const ICONS = {"Alimentação":"◉","Moradia":"⌂","Transporte":"↗","Saúde":"✚","Lazer":"✦","Compras":"▤","Família":"♡","Viagens":"✈","Educação":"▣","Contas e serviços":"≋","Assinaturas":"↻","Impostos e taxas":"▧","Pets":"♧","Salário":"＋","Renda extra":"↗","Investimentos":"⌁","Reembolso":"↩","Venda":"◇","Presente":"♡","Outros":"•"};
   const $ = (id) => document.getElementById(id);
-  const state = { user: null, transactions: [], unsubscribe: null, editingId: null, pendingWrites: false, deferredInstall: null, persistenceReady: false, persistencePromise: Promise.resolve() };
+  const state = { user: null, transactions: [], unsubscribe: null, editingId: null, pendingWrites: false, deferredInstall: null, persistenceReady: false, persistencePromise: Promise.resolve(), demoMode: false };
   const money = (cents) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format((Number(cents) || 0) / 100);
   const localDate = () => { const d = new Date(); return [d.getFullYear(), String(d.getMonth()+1).padStart(2,"0"), String(d.getDate()).padStart(2,"0")].join("-"); };
   const currentMonth = () => localDate().slice(0,7);
@@ -36,9 +36,36 @@
     $("login-view").classList.add("hidden"); $("app-view").classList.remove("hidden");
     $("sign-out-button").classList.remove("hidden");
     const name = (user.displayName || user.email || "Olá").split(" ")[0];
-    $("welcome-message").textContent = "Olá, "+name+". Aqui está o resumo das suas finanças.";
+    $("welcome-message").textContent = state.demoMode
+      ? "Modo demonstração: os dados ficam somente neste navegador."
+      : "Olá, "+name+". Aqui está o resumo das suas finanças.";
     $("user-initials").textContent = name.charAt(0).toUpperCase();
-    subscribeTransactions(user.uid);
+    if (state.demoMode) {
+      $("sign-out-button").classList.remove("hidden");
+      state.transactions = loadDemoTransactions();
+      setConnection("offline", "Demonstração local");
+      setNotice("Modo de demonstração ativo. Não use dados financeiros reais: os registros não são enviados ao Firebase nem sincronizados.", "");
+      render();
+    } else {
+      subscribeTransactions(user.uid);
+    }
+  }
+
+  const DEMO_STORAGE_KEY = "meu-bolso-demo-transactions-v1";
+  function loadDemoTransactions() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(DEMO_STORAGE_KEY) || "[]");
+      return Array.isArray(saved) ? saved : [];
+    } catch (_) { return []; }
+  }
+  function saveDemoTransactions() {
+    localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(state.transactions));
+  }
+  function startDemoMode() {
+    state.demoMode = true;
+    state.user = { uid: "demo-local", displayName: "Demonstração" };
+    $("login-error").classList.add("hidden");
+    showApp(state.user);
   }
 
   function subscribeTransactions(uid) {
@@ -161,22 +188,36 @@
     const date=$("date-input").value; if(!date||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date)){error.textContent="Informe uma data válida.";error.classList.remove("hidden");return;}
     const type=$("transaction-type").value, description=$("description-input").value.trim(), category=$("transaction-category").value;
     if(!description){error.textContent="Informe uma descrição para a movimentação.";error.classList.remove("hidden");return;}
-    const payload={type,amountCents,date,description,category,paymentMethod:$("payment-input").value,cardName:$("payment-input").value==="Crédito"?$("card-name-input").value.trim():"",updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
-    if(!state.editingId) payload.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+    const payload={type,amountCents,date,description,category,paymentMethod:$("payment-input").value,cardName:$("payment-input").value==="Crédito"?$("card-name-input").value.trim():"",updatedAt:new Date().toISOString()};
+    if(!state.editingId) payload.createdAt=new Date().toISOString();
     const btn=$("save-button");btn.disabled=true;btn.textContent="Salvando…";
     try {
-      const coll=firebase.firestore().collection("users").doc(user.uid).collection("transactions");
-      let writePromise;
-      if(state.editingId) writePromise=coll.doc(state.editingId).set(payload,{merge:true});
-      else { const ref=coll.doc(); writePromise=ref.set(payload); }
-      $("transaction-dialog").close();
-      showToast(navigator.onLine?"Movimentação registrada; sincronização em andamento.":"Salva neste aparelho; será sincronizada quando houver conexão.");
-      writePromise.catch(err=>{
-        if(err.code==="permission-denied") setNotice("O Firebase recusou a gravação. Confira as regras do Firestore.","error");
-        else setNotice("Uma movimentação não foi sincronizada. Reconecte-se e tente novamente.","error");
-      });
+      if (state.demoMode) {
+        if (state.editingId) {
+          state.transactions = state.transactions.map(t => t.id === state.editingId ? {...t,...payload} : t);
+        } else {
+          state.transactions.push({id:"demo-"+Date.now()+"-"+Math.random().toString(36).slice(2,8),...payload});
+        }
+        saveDemoTransactions();
+        render();
+        $("transaction-dialog").close();
+        showToast("Registro salvo somente neste navegador.");
+      } else {
+        payload.updatedAt=firebase.firestore.FieldValue.serverTimestamp();
+        if(!state.editingId) payload.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+        const coll=firebase.firestore().collection("users").doc(user.uid).collection("transactions");
+        let writePromise;
+        if(state.editingId) writePromise=coll.doc(state.editingId).set(payload,{merge:true});
+        else { const ref=coll.doc(); writePromise=ref.set(payload); }
+        $("transaction-dialog").close();
+        showToast(navigator.onLine?"Movimentação registrada; sincronização em andamento.":"Salva neste aparelho; será sincronizada quando houver conexão.");
+        writePromise.catch(err=>{
+          if(err.code==="permission-denied") setNotice("O Firebase recusou a gravação. Confira as regras do Firestore.","error");
+          else setNotice("Uma movimentação não foi sincronizada. Reconecte-se e tente novamente.","error");
+        });
+      }
     } catch(err) {
-      error.textContent=err.code==="permission-denied"?"O Firebase não autorizou a gravação. Confira as regras do Firestore.":"Não foi possível salvar a movimentação. Tente novamente.";
+      error.textContent="Não foi possível salvar a movimentação. Verifique o armazenamento do navegador e tente novamente.";
       error.classList.remove("hidden");
     } finally {btn.disabled=false;btn.textContent=state.editingId?"Salvar alterações":"Salvar movimentação";}
   }
@@ -185,9 +226,16 @@
     const item=state.transactions.find(t=>t.id===id); if(!item)return;
     if(!confirm("Excluir “"+(item.description||item.category||"esta movimentação")+"”? Essa ação não poderá ser desfeita."))return;
     try {
-      const deletePromise=firebase.firestore().collection("users").doc(state.user.uid).collection("transactions").doc(id).delete();
-      showToast(navigator.onLine?"Exclusão registrada; sincronização em andamento.":"Exclusão salva neste aparelho e será sincronizada ao reconectar.");
-      deletePromise.catch(err=>setNotice(err.code==="permission-denied"?"O Firebase recusou a exclusão. Confira as regras do Firestore.":"Uma exclusão não foi sincronizada. Reconecte-se e tente novamente.","error"));
+      if (state.demoMode) {
+        state.transactions = state.transactions.filter(t => t.id !== id);
+        saveDemoTransactions();
+        render();
+        showToast("Registro excluído deste navegador.");
+      } else {
+        const deletePromise=firebase.firestore().collection("users").doc(state.user.uid).collection("transactions").doc(id).delete();
+        showToast(navigator.onLine?"Exclusão registrada; sincronização em andamento.":"Exclusão salva neste aparelho e será sincronizada ao reconectar.");
+        deletePromise.catch(err=>setNotice(err.code==="permission-denied"?"O Firebase recusou a exclusão. Confira as regras do Firestore.":"Uma exclusão não foi sincronizada. Reconecte-se e tente novamente.","error"));
+      }
     } catch(err){showToast("Não foi possível excluir a movimentação. Tente novamente.");}
   }
 
@@ -231,6 +279,14 @@
   }
 
   async function signOut() {
+    if (state.demoMode) {
+      state.demoMode = false;
+      state.user = null;
+      state.transactions = [];
+      showLogin();
+      setConnection("pending", "Aguardando login");
+      return;
+    }
     if(!navigator.onLine && state.pendingWrites) {showToast("Conecte-se para sincronizar as alterações antes de sair.");return;}
     try {if(navigator.onLine) await firebase.firestore().waitForPendingWrites(); await firebase.auth().signOut();showToast("Você saiu da sua conta.");}
     catch(err){showToast("Não foi possível sair. Tente novamente.");}
@@ -239,6 +295,7 @@
   function init() {
     $("month-filter").value=currentMonth(); $("date-input").value=localDate(); updateCategoryOptions("expense");
     $("google-sign-in").addEventListener("click",signIn);
+    $("demo-sign-in").addEventListener("click",startDemoMode);
     $("sign-out-button").addEventListener("click",signOut);
     $("new-transaction-button").addEventListener("click",()=>openDialog());
     $("empty-add-button").addEventListener("click",()=>openDialog());
@@ -254,7 +311,13 @@
     window.addEventListener("offline",()=>setConnection("offline","Offline — alterações ficam pendentes"));
     state.persistencePromise = firebase.firestore().enablePersistence({synchronizeTabs:true}).then(()=>{state.persistenceReady=true;}).catch(err=>{state.persistenceReady=false;if(err.code==="failed-precondition")setNotice("O armazenamento offline está ativo em outra aba. Feche as abas duplicadas do Meu Bolso para habilitá-lo aqui.","");else if(err.code==="unimplemented")setNotice("Este navegador não oferece suporte à persistência offline. O app ainda poderá funcionar enquanto estiver aberto.","");});
     firebase.auth().getRedirectResult().catch(showAuthError);
-    firebase.auth().onAuthStateChanged(async user=>{await state.persistencePromise;state.user=user||null;if(user)showApp(user);else showLogin();});
+    firebase.auth().onAuthStateChanged(async user=>{
+      await state.persistencePromise;
+      if (state.demoMode) return;
+      state.user=user||null;
+      if(user) showApp(user);
+      else showLogin();
+    });
     if("serviceWorker" in navigator) window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
     window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();state.deferredInstall=event;$("install-button").classList.remove("hidden");});
     $("install-button").addEventListener("click",async()=>{if(!state.deferredInstall)return;state.deferredInstall.prompt();await state.deferredInstall.userChoice;state.deferredInstall=null;$("install-button").classList.add("hidden");});
