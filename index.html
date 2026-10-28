@@ -20,12 +20,13 @@
       <div class="header-actions">
         <span id="connection-status" class="connection-status" aria-live="polite"><i></i><span>Iniciando…</span></span>
         <button id="install-button" class="button button-quiet hidden" type="button">Instalar app</button>
-        <button id="sign-out-button" class="avatar-button hidden" type="button" aria-label="Sair da conta"><span id="user-initials">—</span></button>
+        <button id="sign-out-button" class="button button-quiet hidden" type="button">Sair</button>
       </div>
     </header>
 
     <main>
-      <section id="login-view" class="login-view">
+      <section id="auth-loading" class="auth-loading" aria-live="polite"><span class="loading-indicator" aria-hidden="true"></span><p>Verificando sua sessão...</p></section>
+      <section id="login-view" class="login-view hidden">
         <div class="login-copy">
           <p class="eyebrow">FINANÇAS DO SEU JEITO</p>
           <h1>Seu dinheiro,<br><span>mais claro.</span></h1>
