@@ -201,18 +201,31 @@
     const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="meu-bolso-"+activeMonth()+".csv";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
   }
 
+  function showAuthError(error) {
+    let message="Não foi possível entrar com Google. Verifique a conexão e tente novamente.";
+    if(error.code==="auth/unauthorized-domain") message="Este domínio ainda não está autorizado no Firebase Authentication.";
+    else if(error.code==="auth/popup-blocked") message="O navegador bloqueou a janela de login. Permita pop-ups para este site e tente novamente.";
+    else if(error.code==="auth/popup-closed-by-user") message="A janela de login foi fechada antes de concluir.";
+    else if(error.code==="auth/operation-not-allowed") message="O provedor Google não está ativado no Firebase Authentication.";
+    else if(error.code==="auth/network-request-failed") message="Sem conexão. Para entrar pela primeira vez, conecte-se à internet.";
+    else if(error.code==="auth/web-storage-unsupported") message="O navegador bloqueou o armazenamento necessário ao login. Abra o Meu Bolso diretamente no Chrome.";
+    $("login-error").textContent=message;$("login-error").classList.remove("hidden");
+  }
+
   async function signIn() {
     $("login-error").classList.add("hidden"); $("google-sign-in").disabled=true;
-    try {const provider=new firebase.auth.GoogleAuthProvider();provider.setCustomParameters({prompt:"select_account"});await firebase.auth().signInWithPopup(provider);}
-    catch(error) {
-      let message="Não foi possível entrar com Google. Verifique a conexão e tente novamente.";
-      if(error.code==="auth/unauthorized-domain") message="Este domínio ainda não está autorizado no Firebase Authentication.";
-      else if(error.code==="auth/popup-blocked") message="O navegador bloqueou a janela de login. Permita pop-ups para este site e tente novamente.";
-      else if(error.code==="auth/popup-closed-by-user") message="A janela de login foi fechada antes de concluir.";
-      else if(error.code==="auth/operation-not-allowed") message="O provedor Google não está ativado no Firebase Authentication.";
-      else if(error.code==="auth/network-request-failed") message="Sem conexão. Para entrar pela primeira vez, conecte-se à internet.";
-      $("login-error").textContent=message;$("login-error").classList.remove("hidden");
-    } finally {$("google-sign-in").disabled=false;}
+    try {
+      const provider=new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({prompt:"select_account"});
+      // No Android/iOS, o fluxo de redirecionamento é mais confiável que pop-ups,
+      // especialmente em abas personalizadas abertas por outros aplicativos.
+      const mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if(mobile) await firebase.auth().signInWithRedirect(provider);
+      else await firebase.auth().signInWithPopup(provider);
+    } catch(error) {
+      showAuthError(error);
+      $("google-sign-in").disabled=false;
+    }
   }
 
   async function signOut() {
@@ -238,6 +251,7 @@
     window.addEventListener("online",()=>{setConnection("pending","Reconectando…");if(state.user)showToast("Conexão restaurada. Sincronizando alterações.");});
     window.addEventListener("offline",()=>setConnection("offline","Offline — alterações ficam pendentes"));
     state.persistencePromise = firebase.firestore().enablePersistence({synchronizeTabs:true}).then(()=>{state.persistenceReady=true;}).catch(err=>{state.persistenceReady=false;if(err.code==="failed-precondition")setNotice("O armazenamento offline está ativo em outra aba. Feche as abas duplicadas do Meu Bolso para habilitá-lo aqui.","");else if(err.code==="unimplemented")setNotice("Este navegador não oferece suporte à persistência offline. O app ainda poderá funcionar enquanto estiver aberto.","");});
+    firebase.auth().getRedirectResult().catch(showAuthError);
     firebase.auth().onAuthStateChanged(async user=>{await state.persistencePromise;state.user=user||null;if(user)showApp(user);else showLogin();});
     if("serviceWorker" in navigator) window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
     window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();state.deferredInstall=event;$("install-button").classList.remove("hidden");});
