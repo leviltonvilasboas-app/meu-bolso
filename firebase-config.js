@@ -1,7 +1,7 @@
 // Configuração pública do app Web do Firebase.
 // Esses valores identificam o projeto; a proteção dos dados é feita pelas regras do Firestore.
 window.MEU_BOLSO_FIREBASE_CONFIG = {
-  apiKey: "AAIzaSyAgpy7LmozBonCRuckrrbK9S6zOP4LXXRI",
+  apiKey: "AIzaSyAgpy7LmozBonCRuckrrbK9S6zOP4LXXRI",
   authDomain: "meu-bolso-51f7b.firebaseapp.com",
   projectId: "meu-bolso-51f7b",
   storageBucket: "meu-bolso-51f7b.firebasestorage.app",
