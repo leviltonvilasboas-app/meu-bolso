@@ -6,7 +6,7 @@
   const COLORS = ["#216e50", "#75a98a", "#d69a51", "#6c91a5", "#bd6b58", "#8c80b8", "#94aa60", "#4d9b9b", "#c17d9c", "#7d8a81"];
   const ICONS = {"Alimentação":"◉","Moradia":"⌂","Transporte":"↗","Saúde":"✚","Lazer":"✦","Compras":"▤","Família":"♡","Viagens":"✈","Educação":"▣","Contas e serviços":"≋","Assinaturas":"↻","Impostos e taxas":"▧","Pets":"♧","Salário":"＋","Renda extra":"↗","Investimentos":"⌁","Reembolso":"↩","Venda":"◇","Presente":"♡","Outros":"•"};
   const $ = (id) => document.getElementById(id);
-  const state = { user: null, transactions: [], unsubscribe: null, editingId: null, pendingWrites: false, deferredInstall: null, persistenceReady: false };
+  const state = { user: null, transactions: [], unsubscribe: null, editingId: null, pendingWrites: false, deferredInstall: null, persistenceReady: false, persistencePromise: Promise.resolve() };
   const money = (cents) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format((Number(cents) || 0) / 100);
   const localDate = () => { const d = new Date(); return [d.getFullYear(), String(d.getMonth()+1).padStart(2,"0"), String(d.getDate()).padStart(2,"0")].join("-"); };
   const currentMonth = () => localDate().slice(0,7);
@@ -166,12 +166,17 @@
     const btn=$("save-button");btn.disabled=true;btn.textContent="Salvando…";
     try {
       const coll=firebase.firestore().collection("users").doc(user.uid).collection("transactions");
-      if(state.editingId) await coll.doc(state.editingId).set(payload,{merge:true});
-      else await coll.add(payload);
+      let writePromise;
+      if(state.editingId) writePromise=coll.doc(state.editingId).set(payload,{merge:true});
+      else { const ref=coll.doc(); writePromise=ref.set(payload); }
       $("transaction-dialog").close();
-      showToast(navigator.onLine?"Movimentação salva.":"Salva neste aparelho; será sincronizada quando houver conexão.");
+      showToast(navigator.onLine?"Movimentação registrada; sincronização em andamento.":"Salva neste aparelho; será sincronizada quando houver conexão.");
+      writePromise.catch(err=>{
+        if(err.code==="permission-denied") setNotice("O Firebase recusou a gravação. Confira as regras do Firestore.","error");
+        else setNotice("Uma movimentação não foi sincronizada. Reconecte-se e tente novamente.","error");
+      });
     } catch(err) {
-      error.textContent=err.code==="permission-denied"?"O Firebase não autorizou a gravação. Confira as regras do Firestore.":"Não foi possível salvar. Verifique a conexão e tente novamente.";
+      error.textContent=err.code==="permission-denied"?"O Firebase não autorizou a gravação. Confira as regras do Firestore.":"Não foi possível salvar a movimentação. Tente novamente.";
       error.classList.remove("hidden");
     } finally {btn.disabled=false;btn.textContent=state.editingId?"Salvar alterações":"Salvar movimentação";}
   }
@@ -179,8 +184,11 @@
   async function deleteTransaction(id) {
     const item=state.transactions.find(t=>t.id===id); if(!item)return;
     if(!confirm("Excluir “"+(item.description||item.category||"esta movimentação")+"”? Essa ação não poderá ser desfeita."))return;
-    try {await firebase.firestore().collection("users").doc(state.user.uid).collection("transactions").doc(id).delete();showToast(navigator.onLine?"Movimentação excluída.":"Exclusão salva neste aparelho e será sincronizada ao reconectar.");}
-    catch(err){showToast("Não foi possível excluir a movimentação. Tente novamente.");}
+    try {
+      const deletePromise=firebase.firestore().collection("users").doc(state.user.uid).collection("transactions").doc(id).delete();
+      showToast(navigator.onLine?"Exclusão registrada; sincronização em andamento.":"Exclusão salva neste aparelho e será sincronizada ao reconectar.");
+      deletePromise.catch(err=>setNotice(err.code==="permission-denied"?"O Firebase recusou a exclusão. Confira as regras do Firestore.":"Uma exclusão não foi sincronizada. Reconecte-se e tente novamente.","error"));
+    } catch(err){showToast("Não foi possível excluir a movimentação. Tente novamente.");}
   }
 
   function exportCSV() {
@@ -229,8 +237,8 @@
     $("export-button").addEventListener("click",exportCSV);
     window.addEventListener("online",()=>{setConnection("pending","Reconectando…");if(state.user)showToast("Conexão restaurada. Sincronizando alterações.");});
     window.addEventListener("offline",()=>setConnection("offline","Offline — alterações ficam pendentes"));
-    firebase.firestore().enablePersistence({synchronizeTabs:true}).then(()=>{state.persistenceReady=true;}).catch(err=>{state.persistenceReady=false;if(err.code==="failed-precondition")setNotice("O armazenamento offline está ativo apenas em outra aba. Feche as abas duplicadas do Meu Bolso para habilitá-lo aqui.","");else if(err.code==="unimplemented")setNotice("Este navegador não oferece suporte ao armazenamento offline persistente. O app ainda poderá funcionar enquanto estiver aberto.","");});
-    firebase.auth().onAuthStateChanged(user=>{state.user=user||null;if(user)showApp(user);else showLogin();});
+    state.persistencePromise = firebase.firestore().enablePersistence({synchronizeTabs:true}).then(()=>{state.persistenceReady=true;}).catch(err=>{state.persistenceReady=false;if(err.code==="failed-precondition")setNotice("O armazenamento offline está ativo em outra aba. Feche as abas duplicadas do Meu Bolso para habilitá-lo aqui.","");else if(err.code==="unimplemented")setNotice("Este navegador não oferece suporte à persistência offline. O app ainda poderá funcionar enquanto estiver aberto.","");});
+    firebase.auth().onAuthStateChanged(async user=>{await state.persistencePromise;state.user=user||null;if(user)showApp(user);else showLogin();});
     if("serviceWorker" in navigator) window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
     window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();state.deferredInstall=event;$("install-button").classList.remove("hidden");});
     $("install-button").addEventListener("click",async()=>{if(!state.deferredInstall)return;state.deferredInstall.prompt();await state.deferredInstall.userChoice;state.deferredInstall=null;$("install-button").classList.add("hidden");});
