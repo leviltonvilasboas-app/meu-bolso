@@ -25,6 +25,7 @@
   }
 
   function showLogin() {
+    $("auth-loading").classList.add("hidden");
     $("login-view").classList.remove("hidden"); $("app-view").classList.add("hidden");
     $("sign-out-button").classList.add("hidden"); $("login-error").classList.add("hidden");
     $("welcome-message").textContent="Acompanhe suas movimentações.";
@@ -33,13 +34,13 @@
   }
 
   function showApp(user) {
+    $("auth-loading").classList.add("hidden");
     $("login-view").classList.add("hidden"); $("app-view").classList.remove("hidden");
     $("sign-out-button").classList.remove("hidden");
     const name = (user.displayName || user.email || "Olá").split(" ")[0];
     $("welcome-message").textContent = state.demoMode
       ? "Modo demonstração: os dados ficam somente neste navegador."
       : "Olá, "+name+". Aqui está o resumo das suas finanças.";
-    $("user-initials").textContent = name.charAt(0).toUpperCase();
     if (state.demoMode) {
       $("sign-out-button").classList.remove("hidden");
       state.transactions = loadDemoTransactions();
@@ -339,6 +340,8 @@
     init();
   } catch(error) {
     setConnection("offline","Configuração pendente");
+    $("auth-loading").classList.add("hidden");
+    $("login-view").classList.remove("hidden");
     $("login-error").textContent="Não foi possível iniciar o Firebase. Confira o arquivo firebase-config.js.";
     $("login-error").classList.remove("hidden");
   }
