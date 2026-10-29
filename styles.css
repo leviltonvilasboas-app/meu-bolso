@@ -67,3 +67,20 @@ body.legacy-search .legacy-content .transactions-panel{border-radius:17px}
 @media(max-width:700px){.amount-keypad button{height:52px;font-size:22px}.transaction-dialog .dialog-actions{margin-top:auto}}
 
 .transaction-dialog #transaction-category.field-invalid{border-color:#e74b51!important;box-shadow:0 0 0 3px #e74b511c}
+
+/* Movimentações: toque abre painel de detalhes */
+.transaction-row-button{width:100%;font:inherit;text-align:left;cursor:pointer;background:transparent;color:inherit;border:0}
+.transaction-row-button:hover{background:#f7faff}
+.transaction-row-button .transaction-main{display:flex;flex-direction:column;min-width:0}
+.transaction-detail-arrow{color:#8295a8;font-size:25px;line-height:1;align-self:center;padding-left:4px}
+.movement-detail-dialog{width:min(480px,calc(100% - 28px));border:0;border-radius:20px;padding:0;max-height:min(85dvh,760px);overflow:auto;box-shadow:0 24px 80px #0b2c4a40}
+.movement-detail-dialog::backdrop{background:#08213bb0;backdrop-filter:blur(4px)}
+.detail-dialog-content{padding:25px;background:white}
+.detail-amount{font-size:32px;font-weight:800;letter-spacing:-.8px;padding:8px 0 22px}
+.detail-amount.income{color:#128653}.detail-amount.expense{color:#d93643}
+.movement-detail-list{border-top:1px solid #e7edf3}
+.movement-detail-row{display:flex;justify-content:space-between;gap:18px;padding:13px 0;border-bottom:1px solid #edf1f5;font-size:13px}
+.movement-detail-row span{color:#74869a}.movement-detail-row strong{text-align:right;color:#183653;font-weight:650;overflow-wrap:anywhere}
+.detail-actions{position:sticky;bottom:0;background:white;padding-top:14px}
+.detail-actions #detail-edit-button{background:var(--blue)}
+@media(max-width:700px){.movement-detail-dialog{width:100%;max-width:none;max-height:100dvh;height:auto;min-height:55dvh;border-radius:20px 20px 0 0;margin:auto 0 0}.detail-dialog-content{padding:23px 20px calc(20px + env(safe-area-inset-bottom))}.movement-detail-row{font-size:14px}}
