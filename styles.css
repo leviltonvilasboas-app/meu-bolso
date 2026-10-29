@@ -73,6 +73,14 @@ body.legacy-search .legacy-content .transactions-panel{border-radius:17px}
 .transaction-row-button:hover{background:#f7faff}
 .transaction-row-button .transaction-main{display:flex;flex-direction:column;min-width:0}
 .transaction-detail-arrow{color:#8295a8;font-size:25px;line-height:1;align-self:center;padding-left:4px}
+
+.delete-confirm-dialog{width:min(420px,calc(100% - 28px))}
+.delete-confirm-message{color:#536579;line-height:1.6;font-size:14px;margin:0 0 22px;overflow-wrap:anywhere}
+.button-danger{background:#b42332!important;color:#fff!important;border:1px solid #b42332!important}
+.button-danger:hover{background:#941b27!important}
+.delete-confirm-dialog .dialog-actions{display:flex;justify-content:flex-end;gap:10px}
+@media(max-width:700px){.delete-confirm-dialog{width:calc(100% - 28px);max-width:420px;max-height:85dvh;height:auto;min-height:0;border-radius:20px;margin:auto}}
+
 .movement-detail-dialog{width:min(480px,calc(100% - 28px));border:0;border-radius:20px;padding:0;max-height:min(85dvh,760px);overflow:auto;box-shadow:0 24px 80px #0b2c4a40}
 .movement-detail-dialog::backdrop{background:#08213bb0;backdrop-filter:blur(4px)}
 .detail-dialog-content{padding:25px;background:white}
