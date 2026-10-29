@@ -135,7 +135,9 @@
     renderHomeSummary();
   }
 
-  let selectedDetailId = null;\n  let refundEditingId = null;\n  let refundSourceId = null;
+  let selectedDetailId = null;
+  let refundEditingId = null;
+  let refundSourceId = null;
 
   function openMovementDetails(id) {
     const item=state.transactions.find(t=>t.id===id);
@@ -159,7 +161,8 @@
     const plan=groupId?state.transactions.find(t=>t.isInstallmentPlan&&t.groupId===groupId):null;
     const future=groupItems.filter(t=>t.installmentNumber>item.installmentNumber && t.date>localDate());
     $("installment-management").classList.toggle("hidden",!groupId||!item.installmentNumber);
-    $("open-refund-dialog").classList.toggle("hidden",item.type!=="expense"||Boolean(item.isInstallmentPlan)||Boolean(item.refundOfId));\n    $("detail-edit-refund-button").classList.toggle("hidden",!item.refundOfId);
+    $("open-refund-dialog").classList.toggle("hidden",item.type!=="expense"||Boolean(item.isInstallmentPlan)||Boolean(item.refundOfId));
+    $("detail-edit-refund-button").classList.toggle("hidden",!item.refundOfId);
     if(groupId&&item.installmentNumber){
       $("installment-summary").textContent="Parcela "+item.installmentNumber+" de "+item.installmentCount+". Compra total: "+money(item.installmentTotalCents||plan?.installmentTotalCents||0)+". "+(future.length+" parcelas futuras, totalizando "+money(future.reduce((n,t)=>n+(Number(t.amountCents)||0),0))+".");
       $("cancel-future-installments").disabled=future.length===0;
@@ -446,7 +449,7 @@
       const refunded=existing.reduce((n,t)=>n+(Number(t.amountCents)||0),0);
       const total=Number(plan?.installmentTotalCents||item.amountCents||0);
       $("refund-original-summary").textContent="Compra original: "+money(total)+" · já reembolsado: "+money(refunded)+" · saldo potencial: "+money(Math.max(0,total-refunded))+".";
-      $("refund-amount").value="";$("refund-error").classList.add("hidden");
+      $("refund-amount").value="";$("refund-date").value=localDate();$("refund-error").classList.add("hidden");
       $("refund-installment-options").classList.toggle("hidden",!item.installmentNumber);
       $("refund-preview").textContent="O reembolso será registrado como receita vinculada à compra original. O histórico da compra será preservado.";
       $("refund-dialog").showModal();$("refund-amount").focus();
