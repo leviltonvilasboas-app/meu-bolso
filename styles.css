@@ -65,3 +65,5 @@ body.legacy-search .legacy-content .transactions-panel{border-radius:17px}
 .more-details-fields .field:last-child{margin-bottom:8px}
 .transaction-dialog .dialog-actions{margin-top:16px}
 @media(max-width:700px){.amount-keypad button{height:52px;font-size:22px}.transaction-dialog .dialog-actions{margin-top:auto}}
+
+.transaction-dialog #transaction-category.field-invalid{border-color:#e74b51!important;box-shadow:0 0 0 3px #e74b511c}
