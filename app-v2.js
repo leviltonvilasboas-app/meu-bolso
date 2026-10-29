@@ -503,7 +503,7 @@
       if(existing.some(t=>Number(t.amountCents)===amountCents)&&!confirm("Já existe um reembolso deste valor para esta compra. Deseja registrar outro?"))return;
       const totalPurchase=Number(original.installmentTotalCents||original.amountCents||0);
       if(amountCents+refunded>totalPurchase&&!confirm("O total reembolsado ultrapassará o valor original da compra. Deseja continuar?"))return;
-      const cancelFuture=!editingRefund&&Boolean(source.installmentNumber)&&document.querySelector('input[name="refund-future-treatment"]:checked')?.value==="cancel";
+      const cancelFuture=!refundEditingId&&Boolean(source.installmentNumber)&&document.querySelector('input[name="refund-future-treatment"]:checked')?.value==="cancel";
       const future=cancelFuture?state.transactions.filter(t=>t.groupId===groupId&&!t.isInstallmentPlan&&t.installmentNumber>source.installmentNumber&&t.date>localDate()):[];
       const futureTotal=future.reduce((n,t)=>n+(Number(t.amountCents)||0),0);
       if(future.length&&!confirm("O reembolso será registrado e "+future.length+" parcelas futuras ("+money(futureTotal)+") serão canceladas. As parcelas anteriores e a selecionada serão preservadas. Confirmar?"))return;
