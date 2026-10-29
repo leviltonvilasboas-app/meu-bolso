@@ -145,7 +145,7 @@
     const linkedRefunds=state.transactions.filter(t=>t.refundOfId===item.id||(item.groupId&&t.refundOfGroupId===item.groupId));
     const linkedTo= item.refundOfId ? state.transactions.find(t=>t.id===item.refundOfId) : null;
     const details=[
-      ["Tipo",income?"Receita":"Despesa"],
+      ["Tipo",item.refundOfId?"Estorno / reembolso":(income?"Receita":"Despesa")],
       ["Categoria",item.category||"Sem categoria"],
       ["Data",niceDate(item.date)],
       ["Forma de pagamento",item.paymentMethod||"Não informada"],
@@ -166,7 +166,7 @@
       $("cancel-future-installments").textContent=future.length?"Cancelar "+future.length+" parcelas futuras":"Não há parcelas futuras";
     }
     $("detail-delete-button").textContent=item.installmentNumber?"Excluir esta parcela":"Excluir";
-    $("detail-edit-button").classList.toggle("hidden",Boolean(item.installmentNumber));
+    $("detail-edit-button").classList.toggle("hidden",Boolean(item.installmentNumber)||Boolean(item.refundOfId));
     $("movement-detail-content").innerHTML='<div class="detail-amount '+(income?"income":"expense")+'">'+(income?"+":"−")+money(item.amountCents)+'</div><div class="movement-detail-list">'+details.map(([label,value])=>'<div class="movement-detail-row"><span>'+escapeHTML(label)+'</span><strong>'+escapeHTML(value)+'</strong></div>').join("")+'</div>'+ (item.installmentNumber?'<p class="installment-position">Parcela '+item.installmentNumber+' de '+item.installmentCount+'</p>':'');
     $("movement-detail-dialog").showModal();
   }
@@ -472,7 +472,7 @@
       const future=cancelFuture?state.transactions.filter(t=>t.groupId===groupId&&!t.isInstallmentPlan&&t.installmentNumber>source.installmentNumber&&t.date>localDate()):[];
       const futureTotal=future.reduce((n,t)=>n+(Number(t.amountCents)||0),0);
       if(future.length&&!confirm("O reembolso será registrado e "+future.length+" parcelas futuras ("+money(futureTotal)+") serão canceladas. As parcelas anteriores e a selecionada serão preservadas. Confirmar?"))return;
-      const refund={type:"income",amountCents,date:localDate(),description:"Reembolso: "+(source.description||source.category||"Despesa original"),category:"Reembolso",paymentMethod:source.paymentMethod||"Não informada",cardName:source.cardName||"",refundOfId:original.id,refundOfGroupId:groupId,refundOfInstallmentId:source.installmentNumber?source.id:null,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+      const refund={type:"income",amountCents,date:localDate(),description:"Reembolso: "+(source.description||source.category||"Despesa original"),category:"Reembolso",paymentMethod:source.paymentMethod||"Não informada",cardName:source.cardName||"",refundOfId:original.id,refundOfGroupId:groupId,refundOfInstallmentId:source.installmentNumber?source.id:null,isRefund:true,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
       try{
         if(state.demoMode){
           refund.id="refund-"+Date.now()+"-"+Math.random().toString(36).slice(2,7);state.transactions.push(refund);
