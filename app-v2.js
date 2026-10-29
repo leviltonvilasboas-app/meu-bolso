@@ -115,7 +115,7 @@
 
   function render() {
     const month=activeMonth();
-    const allInMonth=state.transactions.filter(t=>String(t.date||"").startsWith(month));
+    const allInMonth=state.transactions.filter(t=>!t.isInstallmentPlan && String(t.date||"").startsWith(month));
     const expenses=allInMonth.filter(t=>t.type==="expense"), incomes=allInMonth.filter(t=>t.type==="income");
     const sum=arr=>arr.reduce((n,t)=>n+Math.max(0,Number(t.amountCents)||0),0);
     const expenseTotal=sum(expenses), incomeTotal=sum(incomes), net=incomeTotal-expenseTotal;
@@ -150,7 +150,19 @@
       ...(item.cardName?[["Cartão",item.cardName]]:[]),
       ["Descrição",item.description||"Sem descrição"]
     ];
-    $("movement-detail-content").innerHTML='<div class="detail-amount '+(income?"income":"expense")+'">'+(income?"+":"−")+money(item.amountCents)+'</div><div class="movement-detail-list">'+details.map(([label,value])=>'<div class="movement-detail-row"><span>'+escapeHTML(label)+'</span><strong>'+escapeHTML(value)+'</strong></div>').join("")+'</div>';
+    const groupId=item.groupId;
+    const groupItems=groupId?state.transactions.filter(t=>t.groupId===groupId&&!t.isInstallmentPlan).sort((a,b)=>(a.installmentNumber||0)-(b.installmentNumber||0)):[];
+    const plan=groupId?state.transactions.find(t=>t.isInstallmentPlan&&t.groupId===groupId):null;
+    const future=groupItems.filter(t=>t.installmentNumber>item.installmentNumber && t.date>localDate());
+    $("installment-management").classList.toggle("hidden",!groupId||!item.installmentNumber);
+    if(groupId&&item.installmentNumber){
+      $("installment-summary").textContent="Parcela "+item.installmentNumber+" de "+item.installmentCount+". Compra total: "+money(item.installmentTotalCents||plan?.installmentTotalCents||0)+". "+(future.length+" parcelas futuras, totalizando "+money(future.reduce((n,t)=>n+(Number(t.amountCents)||0),0))+".");
+      $("cancel-future-installments").disabled=future.length===0;
+      $("cancel-future-installments").textContent=future.length?"Cancelar "+future.length+" parcelas futuras":"Não há parcelas futuras";
+    }
+    $("detail-delete-button").textContent=item.installmentNumber?"Excluir esta parcela":"Excluir";
+    $("detail-edit-button").classList.toggle("hidden",Boolean(item.installmentNumber));
+    $("movement-detail-content").innerHTML='<div class="detail-amount '+(income?"income":"expense")+'">'+(income?"+":"−")+money(item.amountCents)+'</div><div class="movement-detail-list">'+details.map(([label,value])=>'<div class="movement-detail-row"><span>'+escapeHTML(label)+'</span><strong>'+escapeHTML(value)+'</strong></div>').join("")+'</div>'+ (item.installmentNumber?'<p class="installment-position">Parcela '+item.installmentNumber+' de '+item.installmentCount+'</p>':'');
     $("movement-detail-dialog").showModal();
   }
 
@@ -272,12 +284,14 @@
       });
       const btn=$("save-button");btn.disabled=true;btn.textContent="Salvando parcelas…";
       try {
+        const plan={...payload,id:groupId,isInstallmentPlan:true,groupId,installmentCount:count,installmentTotalCents:amountCents,firstInstallmentDate:date,description:finalDescription,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
         if(state.demoMode) {
-          state.transactions.push(...installments.map((item,i)=>({...item,id:groupId+"-"+(i+1)})));
+          state.transactions.push(plan,...installments.map((item,i)=>({...item,id:groupId+"-"+(i+1)})));
           saveDemoTransactions();render();$("transaction-dialog").close();showToast(count+" parcelas registradas neste navegador.");
         } else {
           const coll=firebase.firestore().collection("users").doc(user.uid).collection("transactions");
           const batch=firebase.firestore().batch();
+          batch.set(coll.doc(groupId),{...plan,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
           installments.forEach(item=>{const ref=coll.doc();batch.set(ref,{...item,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});});
           await batch.commit();$("transaction-dialog").close();showToast(count+" parcelas registradas.");
         }
@@ -420,6 +434,20 @@
     $("close-detail-dialog").addEventListener("click",closeMovementDetails);
     $("detail-edit-button").addEventListener("click",()=>{const item=state.transactions.find(t=>t.id===selectedDetailId);if(item){const id=item.id;closeMovementDetails();openDialog(item);state.editingId=id;}});
     $("detail-delete-button").addEventListener("click",async()=>{const id=selectedDetailId;if(!id)return;closeMovementDetails();await deleteTransaction(id);});
+    $("cancel-future-installments").addEventListener("click",async()=>{
+      const item=state.transactions.find(t=>t.id===selectedDetailId);if(!item?.groupId||!item.installmentNumber)return;
+      const group=state.transactions.filter(t=>t.groupId===item.groupId&&!t.isInstallmentPlan);
+      const future=group.filter(t=>t.installmentNumber>item.installmentNumber&&t.date>localDate());
+      if(!future.length)return;
+      const total=future.reduce((n,t)=>n+(Number(t.amountCents)||0),0);
+      const lastPreserved=group.filter(t=>!future.includes(t)).sort((a,b)=>(b.installmentNumber||0)-(a.installmentNumber||0))[0];
+      if(!confirm("Cancelar "+future.length+" parcelas futuras, total de "+money(total)+"? Última parcela preservada: "+(lastPreserved?niceDate(lastPreserved.date):"nenhuma")+". As parcelas anteriores serão mantidas."))return;
+      try{
+        if(state.demoMode){const ids=new Set(future.map(t=>t.id));state.transactions=state.transactions.filter(t=>!ids.has(t.id));saveDemoTransactions();render();}
+        else{const coll=firebase.firestore().collection("users").doc(state.user.uid).collection("transactions");const batch=firebase.firestore().batch();future.forEach(t=>batch.delete(coll.doc(t.id)));await batch.commit();}
+        showToast(future.length+" parcelas futuras canceladas.");closeMovementDetails();
+      }catch(err){setNotice("Não foi possível cancelar as parcelas futuras. Tente novamente.","error");}
+    });
     $("export-button").addEventListener("click",exportCSV);
     window.addEventListener("online",()=>{setConnection("pending","Reconectando…");if(state.user)showToast("Conexão restaurada. Sincronizando alterações.");});
     window.addEventListener("offline",()=>setConnection("offline","Offline — alterações ficam pendentes"));
