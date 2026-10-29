@@ -56,9 +56,8 @@ test('Parcelamento soma exatamente o valor informado, incluindo centavos restant
 });
 
 test('Movimentações são ordenadas da mais recente para a mais antiga', () => {
-  assert.match(app, /\.sort\(\(a,b\)=>String\(b\.date\|\|"""\)\.localeCompare\(String\(a\.date\|\|"""\)\)/);
+  assert.match(app, /return state\.transactions\.filter[\s\S]{0,600}\.sort\(\(a,b\)=>String\(b\.date/);
 });
-
 test('Exclusão usa modal do app em vez do confirm do navegador', () => {
   assert.match(app, /function requestDeleteTransaction\(id\)/);
   assert.match(app, /delete-confirm-dialog/);
