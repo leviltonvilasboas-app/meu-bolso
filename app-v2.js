@@ -159,7 +159,7 @@
     const plan=groupId?state.transactions.find(t=>t.isInstallmentPlan&&t.groupId===groupId):null;
     const future=groupItems.filter(t=>t.installmentNumber>item.installmentNumber && t.date>localDate());
     $("installment-management").classList.toggle("hidden",!groupId||!item.installmentNumber);
-    $("open-refund-dialog").classList.toggle("hidden",item.type!=="expense"||Boolean(item.isInstallmentPlan)||Boolean(item.refundOfId));
+    $("open-refund-dialog").classList.toggle("hidden",item.type!=="expense"||Boolean(item.installmentNumber)||Boolean(item.refundOfId));
     if(groupId&&item.installmentNumber){
       $("installment-summary").textContent="Parcela "+item.installmentNumber+" de "+item.installmentCount+". Compra total: "+money(item.installmentTotalCents||plan?.installmentTotalCents||0)+". "+(future.length+" parcelas futuras, totalizando "+money(future.reduce((n,t)=>n+(Number(t.amountCents)||0),0))+".");
       $("cancel-future-installments").disabled=future.length===0;
@@ -439,7 +439,7 @@
     $("close-detail-dialog").addEventListener("click",closeMovementDetails);
     $("detail-edit-button").addEventListener("click",()=>{const item=state.transactions.find(t=>t.id===selectedDetailId);if(item){const id=item.id;closeMovementDetails();openDialog(item);state.editingId=id;}});
     $("open-refund-dialog").addEventListener("click",()=>{
-      const item=state.transactions.find(t=>t.id===selectedDetailId);if(!item||item.type!=="expense")return;
+      const item=state.transactions.find(t=>t.id===selectedDetailId);if(!item||item.type!=="expense"||item.installmentNumber)return;
       const existing=state.transactions.filter(t=>t.refundOfId===item.id);
       const refunded=existing.reduce((n,t)=>n+(Number(t.amountCents)||0),0);
       $("refund-original-summary").textContent="Compra original: "+money(item.amountCents)+" · já reembolsado: "+money(refunded)+" · saldo potencial: "+money(Math.max(0,item.amountCents-refunded))+".";
@@ -451,7 +451,7 @@
     $("cancel-refund").addEventListener("click",()=>$("refund-dialog").close());
     $("refund-form").addEventListener("submit",async(event)=>{
       event.preventDefault();
-      const original=state.transactions.find(t=>t.id===selectedDetailId);if(!original||original.type!=="expense")return;
+      const original=state.transactions.find(t=>t.id===selectedDetailId);if(!original||original.type!=="expense"||original.installmentNumber)return;
       const value=Number(String($("refund-amount").value).replace(",","."));
       const error=$("refund-error");error.classList.add("hidden");
       if(!Number.isFinite(value)||value<=0){error.textContent="Informe um valor de reembolso maior que zero.";error.classList.remove("hidden");return;}
