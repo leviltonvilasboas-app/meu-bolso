@@ -17,7 +17,7 @@
   const setNotice = (message, kind="") => { const el=$("notice"); el.textContent=message; el.className = message ? "notice"+(kind ? " "+kind : "") : "notice hidden"; };
   const setConnection = (kind, text) => { const el=$("connection-status"); el.className="connection-status "+kind; el.querySelector("span").textContent=text; };
   const activeMonth = () => $("month-filter").value || currentMonth();
-  const categoryOptions = (type, selected) => (type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map(c=>'<option value="'+escapeHTML(c)+'"'+(c===selected?' selected':'')+'>'+escapeHTML(c)+'</option>').join("");
+  const categoryOptions = (type, selected) => '<option value="">Selecione uma categoria</option>' + (type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map(c=>'<option value="'+escapeHTML(c)+'"'+(c===selected?' selected':'')+'>'+escapeHTML(c)+'</option>').join("");
 
   const HOME_SHORTCUTS=[{id:"expense",label:"Lançar despesa",icon:"−",tone:"expense",action:"expense"},{id:"income",label:"Lançar receita",icon:"+",tone:"income",action:"income"},{id:"transactions",label:"Movimentações",icon:"☷",tone:"blue",action:"transactions"},{id:"search",label:"Buscar lançamento",icon:"⌕",tone:"purple",action:"search"},{id:"reports",label:"Relatórios",icon:"▥",tone:"blue",action:"reports"},{id:"categories",label:"Categorias",icon:"◇",tone:"slate",action:"categories"},{id:"budgets",label:"Orçamentos",icon:"◎",tone:"green",action:"budgets"},{id:"accounts",label:"Contas",icon:"▣",tone:"slate",action:"accounts"}];
   const SHORTCUTS_KEY="meu-bolso-home-shortcuts-v1",HIDDEN_MONEY_KEY="meu-bolso-hidden-money-v1";
@@ -31,7 +31,7 @@
   function showLegacy(section){$("home-screen").classList.add("hidden");$("shortcut-customizer").classList.add("hidden");$("more-menu").classList.add("hidden");$("legacy-content").classList.remove("hidden");document.body.classList.toggle("legacy-search",section==="search");document.body.classList.toggle("legacy-transactions",section==="transactions");if(section==="search"){$("search-filter").focus();}else if(section==="reports"||section==="categories")$("category-panel").scrollIntoView({behavior:"smooth",block:"start"});else if(section==="export")exportCSV();else $("legacy-content").scrollIntoView({behavior:"smooth",block:"start"});document.querySelectorAll("[data-home-nav]").forEach(b=>b.classList.toggle("active",b.dataset.homeNav===(section==="reports"?"reports":"transactions")));}
   function showHome(){document.body.classList.remove("legacy-search","legacy-transactions");$("home-screen").classList.remove("hidden");$("shortcut-customizer").classList.add("hidden");$("more-menu").classList.add("hidden");$("legacy-content").classList.add("hidden");document.querySelectorAll("[data-home-nav]").forEach(b=>b.classList.toggle("active",b.dataset.homeNav==="home"));}
   function updateCategoryOptions(type, selected) {
-    $("transaction-category").innerHTML = categoryOptions(type, selected || (type==="income" ? "Salário" : "Alimentação"));
+    $("transaction-category").innerHTML = categoryOptions(type, selected || "");
     $("category-filter").innerHTML = '<option value="all">Todas as categorias</option>'+[...new Set([...EXPENSE_CATEGORIES,...INCOME_CATEGORIES])].map(c=>'<option value="'+escapeHTML(c)+'">'+escapeHTML(c)+'</option>').join("");
   }
 
@@ -182,7 +182,7 @@
 
   function openDialog(transaction) {
     state.editingId=transaction?.id||null;
-    $("dialog-title").textContent=transaction?"Editar movimentação":"Nova movimentação";
+    $("dialog-title").textContent=transaction?"Editar movimentação":(transaction?.type==="income"?"Nova receita":"Nova despesa");
     $("transaction-form").reset();
     const type=transaction?.type||"expense"; $("transaction-type").value=type;
     document.querySelectorAll(".type-option").forEach(btn=>btn.classList.toggle("selected",btn.dataset.type===type));
@@ -199,7 +199,7 @@
     $("card-name-input").value=transaction?.cardName||"";
     $("card-name-field").classList.toggle("hidden",$("payment-input").value!=="Crédito");
     $("form-error").classList.add("hidden");
-    $("save-button").disabled=false; $("save-button").textContent=transaction?"Salvar alterações":"Salvar movimentação";
+    $("save-button").disabled=false; $("save-button").textContent=transaction?"Salvar alterações":(type==="income"?"Registrar receita":"Registrar despesa");
     $("transaction-dialog").showModal();
     setTimeout(()=>$("amount-input").focus(),60);
   }
@@ -225,6 +225,8 @@
     if(!Number.isSafeInteger(amountCents)||amountCents<=0){error.textContent="Confira o valor informado.";error.classList.remove("hidden");return;}
     const date=$("date-input").value; if(!date||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date)){error.textContent="Informe uma data válida.";error.classList.remove("hidden");return;}
     const type=$("transaction-type").value, description=$("description-input").value.trim(), category=$("transaction-category").value;
+    if(!category){$("transaction-category").classList.add("field-invalid");error.textContent="Selecione uma categoria.";error.classList.remove("hidden");return;}
+    $("transaction-category").classList.remove("field-invalid");
     const finalDescription=description || category || (type==="income"?"Receita":"Despesa");
     const payload={type,amountCents,date,description:finalDescription,category,paymentMethod:$("payment-input").value,cardName:$("payment-input").value==="Crédito"?$("card-name-input").value.trim():"",updatedAt:new Date().toISOString()};
     if(!state.editingId) payload.createdAt=new Date().toISOString();
@@ -355,7 +357,7 @@
     $("amount-keypad").addEventListener("click",event=>{const key=event.target.closest("[data-keypad]");if(key)updateAmountFromKeypad(key.dataset.keypad);});
     $("toggle-more-details").addEventListener("click",()=>{const expanded=$("toggle-more-details").getAttribute("aria-expanded")==="true";$("toggle-more-details").setAttribute("aria-expanded",String(!expanded));$("more-details-fields").classList.toggle("hidden",expanded);$("toggle-more-details").textContent=expanded?"＋ Mais detalhes":"− Menos detalhes";});
     $("transaction-form").addEventListener("submit",saveTransaction);
-    document.querySelectorAll(".type-option").forEach(btn=>btn.addEventListener("click",()=>{$("transaction-type").value=btn.dataset.type;document.querySelectorAll(".type-option").forEach(b=>b.classList.toggle("selected",b===btn));updateCategoryOptions(btn.dataset.type);}));
+    document.querySelectorAll(".type-option").forEach(btn=>btn.addEventListener("click",()=>{$("transaction-type").value=btn.dataset.type;document.querySelectorAll(".type-option").forEach(b=>b.classList.toggle("selected",b===btn));updateCategoryOptions(btn.dataset.type);$("dialog-title").textContent=btn.dataset.type==="income"?"Nova receita":"Nova despesa";$("save-button").textContent=btn.dataset.type==="income"?"Registrar receita":"Registrar despesa";$("transaction-category").classList.remove("field-invalid");}));
     $("payment-input").addEventListener("change",()=> $("card-name-field").classList.toggle("hidden",$("payment-input").value!=="Crédito"));
     ["month-filter","search-filter","category-filter"].forEach(id=>$(id).addEventListener("input",render));
     $("transactions-list").addEventListener("click",event=>{const edit=event.target.closest("[data-edit]"),del=event.target.closest("[data-delete]");if(edit){const t=state.transactions.find(item=>item.id===edit.dataset.edit);if(t)openDialog(t);}if(del)deleteTransaction(del.dataset.delete);});
