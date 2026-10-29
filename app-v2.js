@@ -142,19 +142,24 @@
     if(!item)return;
     selectedDetailId=id;
     const income=item.type==="income";
+    const linkedRefunds=state.transactions.filter(t=>t.refundOfId===item.id);
+    const linkedTo= item.refundOfId ? state.transactions.find(t=>t.id===item.refundOfId) : null;
     const details=[
       ["Tipo",income?"Receita":"Despesa"],
       ["Categoria",item.category||"Sem categoria"],
       ["Data",niceDate(item.date)],
       ["Forma de pagamento",item.paymentMethod||"Não informada"],
       ...(item.cardName?[["Cartão",item.cardName]]:[]),
-      ["Descrição",item.description||"Sem descrição"]
+      ["Descrição",item.description||"Sem descrição"],
+      ...(linkedTo?[["Compra original",linkedTo.description||linkedTo.category||"Despesa"],["Reembolso vinculado","Sim"]]:[]),
+      ...(linkedRefunds.length?[["Reembolsos registrados",linkedRefunds.length+" · "+money(linkedRefunds.reduce((n,t)=>n+(Number(t.amountCents)||0),0))]]:[])
     ];
     const groupId=item.groupId;
     const groupItems=groupId?state.transactions.filter(t=>t.groupId===groupId&&!t.isInstallmentPlan).sort((a,b)=>(a.installmentNumber||0)-(b.installmentNumber||0)):[];
     const plan=groupId?state.transactions.find(t=>t.isInstallmentPlan&&t.groupId===groupId):null;
     const future=groupItems.filter(t=>t.installmentNumber>item.installmentNumber && t.date>localDate());
     $("installment-management").classList.toggle("hidden",!groupId||!item.installmentNumber);
+    $("open-refund-dialog").classList.toggle("hidden",item.type!=="expense"||Boolean(item.isInstallmentPlan)||Boolean(item.refundOfId));
     if(groupId&&item.installmentNumber){
       $("installment-summary").textContent="Parcela "+item.installmentNumber+" de "+item.installmentCount+". Compra total: "+money(item.installmentTotalCents||plan?.installmentTotalCents||0)+". "+(future.length+" parcelas futuras, totalizando "+money(future.reduce((n,t)=>n+(Number(t.amountCents)||0),0))+".");
       $("cancel-future-installments").disabled=future.length===0;
@@ -433,6 +438,37 @@
     $("transactions-list").addEventListener("click",event=>{const row=event.target.closest("[data-open-detail]");if(row)openMovementDetails(row.dataset.openDetail);});
     $("close-detail-dialog").addEventListener("click",closeMovementDetails);
     $("detail-edit-button").addEventListener("click",()=>{const item=state.transactions.find(t=>t.id===selectedDetailId);if(item){const id=item.id;closeMovementDetails();openDialog(item);state.editingId=id;}});
+    $("open-refund-dialog").addEventListener("click",()=>{
+      const item=state.transactions.find(t=>t.id===selectedDetailId);if(!item||item.type!=="expense")return;
+      const existing=state.transactions.filter(t=>t.refundOfId===item.id);
+      const refunded=existing.reduce((n,t)=>n+(Number(t.amountCents)||0),0);
+      $("refund-original-summary").textContent="Compra original: "+money(item.amountCents)+" · já reembolsado: "+money(refunded)+" · saldo potencial: "+money(Math.max(0,item.amountCents-refunded))+".";
+      $("refund-amount").value="";$("refund-error").classList.add("hidden");
+      $("refund-preview").textContent="O reembolso será registrado como receita na categoria Reembolso e vinculado à despesa original. Isso mantém o histórico da compra e reflete o valor devolvido no saldo.";
+      $("refund-dialog").showModal();$("refund-amount").focus();
+    });
+    $("close-refund-dialog").addEventListener("click",()=>$("refund-dialog").close());
+    $("cancel-refund").addEventListener("click",()=>$("refund-dialog").close());
+    $("refund-form").addEventListener("submit",async(event)=>{
+      event.preventDefault();
+      const original=state.transactions.find(t=>t.id===selectedDetailId);if(!original||original.type!=="expense")return;
+      const value=Number(String($("refund-amount").value).replace(",","."));
+      const error=$("refund-error");error.classList.add("hidden");
+      if(!Number.isFinite(value)||value<=0){error.textContent="Informe um valor de reembolso maior que zero.";error.classList.remove("hidden");return;}
+      const amountCents=Math.round(value*100);
+      if(amountCents<=0||amountCents>999999999){error.textContent="Confira o valor informado.";error.classList.remove("hidden");return;}
+      const existing=state.transactions.filter(t=>t.refundOfId===original.id);
+      const refunded=existing.reduce((n,t)=>n+(Number(t.amountCents)||0),0);
+      if(existing.some(t=>Number(t.amountCents)===amountCents)&&!confirm("Já existe um reembolso deste mesmo valor para esta compra. Deseja registrar outro?"))return;
+      if(amountCents+refunded>Number(original.amountCents||0)&&!confirm("Este reembolso fará o total devolvido ultrapassar o valor original da compra. Deseja continuar?"))return;
+      const now=new Date().toISOString();
+      const refund={type:"income",amountCents,date:localDate(),description:"Reembolso: "+(original.description||original.category||"Despesa original"),category:"Reembolso",paymentMethod:original.paymentMethod||"Não informada",cardName:original.cardName||"",refundOfId:original.id,refundOfGroupId:original.groupId||null,createdAt:now,updatedAt:now};
+      try{
+        if(state.demoMode){refund.id="refund-"+Date.now()+"-"+Math.random().toString(36).slice(2,7);state.transactions.push(refund);saveDemoTransactions();render();}
+        else{const coll=firebase.firestore().collection("users").doc(state.user.uid).collection("transactions");await coll.add({...refund,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});}
+        $("refund-dialog").close();closeMovementDetails();showToast("Reembolso registrado e vinculado à compra original.");
+      }catch(err){error.textContent="Não foi possível registrar o reembolso. Tente novamente.";error.classList.remove("hidden");}
+    });
     $("detail-delete-button").addEventListener("click",async()=>{const id=selectedDetailId;if(!id)return;closeMovementDetails();await deleteTransaction(id);});
     $("cancel-future-installments").addEventListener("click",async()=>{
       const item=state.transactions.find(t=>t.id===selectedDetailId);if(!item?.groupId||!item.installmentNumber)return;
