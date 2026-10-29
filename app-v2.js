@@ -338,7 +338,7 @@
 
   async function deleteTransaction(id) {
     const item=state.transactions.find(t=>t.id===id); if(!item)return;
-    if(!confirm("Excluir “"+(item.description||item.category||"esta movimentação")+"”? Essa ação não poderá ser desfeita."))return;
+    if(!confirm(item.isRefund?"Excluir este reembolso de "+money(item.amountCents)+"? O saldo financeiro será ajustado e esta ação não poderá ser desfeita.":"Excluir “"+(item.description||item.category||"esta movimentação")+"”? Essa ação não poderá ser desfeita."))return;
     try {
       if (state.demoMode) {
         state.transactions = state.transactions.filter(t => t.id !== id);
@@ -439,33 +439,50 @@
     $("close-detail-dialog").addEventListener("click",closeMovementDetails);
     $("detail-edit-button").addEventListener("click",()=>{const item=state.transactions.find(t=>t.id===selectedDetailId);if(item){const id=item.id;closeMovementDetails();openDialog(item);state.editingId=id;}});
     $("open-refund-dialog").addEventListener("click",()=>{
-      const item=state.transactions.find(t=>t.id===selectedDetailId);if(!item||item.type!=="expense"||item.installmentNumber)return;
-      const existing=state.transactions.filter(t=>t.refundOfId===item.id);
+      const item=state.transactions.find(t=>t.id===selectedDetailId);if(!item||item.type!=="expense"||item.isInstallmentPlan)return;
+      const plan=item.groupId?state.transactions.find(t=>t.isInstallmentPlan&&t.groupId===item.groupId):item;
+      const linkId=plan?.id||item.id;
+      const existing=state.transactions.filter(t=>t.refundOfId===linkId||(item.groupId&&t.refundOfGroupId===item.groupId));
       const refunded=existing.reduce((n,t)=>n+(Number(t.amountCents)||0),0);
-      $("refund-original-summary").textContent="Compra original: "+money(item.amountCents)+" · já reembolsado: "+money(refunded)+" · saldo potencial: "+money(Math.max(0,item.amountCents-refunded))+".";
+      const total=Number(plan?.installmentTotalCents||item.amountCents||0);
+      $("refund-original-summary").textContent="Compra original: "+money(total)+" · já reembolsado: "+money(refunded)+" · saldo potencial: "+money(Math.max(0,total-refunded))+".";
       $("refund-amount").value="";$("refund-error").classList.add("hidden");
-      $("refund-preview").textContent="O reembolso será registrado como receita na categoria Reembolso e vinculado à despesa original. Isso mantém o histórico da compra e reflete o valor devolvido no saldo.";
+      $("refund-installment-options").classList.toggle("hidden",!item.installmentNumber);
+      $("refund-preview").textContent="O reembolso será registrado como receita vinculada à compra original. O histórico da compra será preservado.";
       $("refund-dialog").showModal();$("refund-amount").focus();
     });
     $("close-refund-dialog").addEventListener("click",()=>$("refund-dialog").close());
     $("cancel-refund").addEventListener("click",()=>$("refund-dialog").close());
     $("refund-form").addEventListener("submit",async(event)=>{
       event.preventDefault();
-      const original=state.transactions.find(t=>t.id===selectedDetailId);if(!original||original.type!=="expense")return;
-      const value=Number(String($("refund-amount").value).replace(",","."));
+      const source=state.transactions.find(t=>t.id===selectedDetailId);
+      if(!source||source.type!=="expense"||source.isInstallmentPlan)return;
+      const plan=source.groupId?state.transactions.find(t=>t.isInstallmentPlan&&t.groupId===source.groupId):source;
+      const original=plan||source;
+      const amountCents=Math.round(Number(String($("refund-amount").value).replace(",", "."))*100);
       const error=$("refund-error");error.classList.add("hidden");
-      if(!Number.isFinite(value)||value<=0){error.textContent="Informe um valor de reembolso maior que zero.";error.classList.remove("hidden");return;}
-      const amountCents=Math.round(value*100);
-      if(amountCents<=0||amountCents>999999999){error.textContent="Confira o valor informado.";error.classList.remove("hidden");return;}
-      const existing=state.transactions.filter(t=>t.refundOfId===original.id);
+      if(!Number.isFinite(amountCents)||amountCents<=0||amountCents>999999999){error.textContent="Informe um valor de reembolso válido.";error.classList.remove("hidden");return;}
+      const groupId=source.groupId||null;
+      const existing=state.transactions.filter(t=>t.refundOfId===original.id||(groupId&&t.refundOfGroupId===groupId));
       const refunded=existing.reduce((n,t)=>n+(Number(t.amountCents)||0),0);
-      if(existing.some(t=>Number(t.amountCents)===amountCents)&&!confirm("Já existe um reembolso deste mesmo valor para esta compra. Deseja registrar outro?"))return;
-      if(amountCents+refunded>Number(original.amountCents||0)&&!confirm("Este reembolso fará o total devolvido ultrapassar o valor original da compra. Deseja continuar?"))return;
-      const now=new Date().toISOString();
-      const refund={type:"income",amountCents,date:localDate(),description:"Reembolso: "+(original.description||original.category||"Despesa original"),category:"Reembolso",paymentMethod:original.paymentMethod||"Não informada",cardName:original.cardName||"",refundOfId:original.id,refundOfGroupId:original.groupId||null,createdAt:now,updatedAt:now};
+      if(existing.some(t=>Number(t.amountCents)===amountCents)&&!confirm("Já existe um reembolso deste valor para esta compra. Deseja registrar outro?"))return;
+      const totalPurchase=Number(original.installmentTotalCents||original.amountCents||0);
+      if(amountCents+refunded>totalPurchase&&!confirm("O total reembolsado ultrapassará o valor original da compra. Deseja continuar?"))return;
+      const cancelFuture=Boolean(source.installmentNumber)&&document.querySelector('input[name="refund-future-treatment"]:checked')?.value==="cancel";
+      const future=cancelFuture?state.transactions.filter(t=>t.groupId===groupId&&!t.isInstallmentPlan&&t.installmentNumber>source.installmentNumber&&t.date>localDate()):[];
+      const futureTotal=future.reduce((n,t)=>n+(Number(t.amountCents)||0),0);
+      if(future.length&&!confirm("O reembolso será registrado e "+future.length+" parcelas futuras ("+money(futureTotal)+") serão canceladas. As parcelas anteriores e a selecionada serão preservadas. Confirmar?"))return;
+      const refund={type:"income",amountCents,date:localDate(),description:"Reembolso: "+(source.description||source.category||"Despesa original"),category:"Reembolso",paymentMethod:source.paymentMethod||"Não informada",cardName:source.cardName||"",refundOfId:original.id,refundOfGroupId:groupId,refundOfInstallmentId:source.installmentNumber?source.id:null,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
       try{
-        if(state.demoMode){refund.id="refund-"+Date.now()+"-"+Math.random().toString(36).slice(2,7);state.transactions.push(refund);saveDemoTransactions();render();}
-        else{const coll=firebase.firestore().collection("users").doc(state.user.uid).collection("transactions");await coll.add({...refund,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});}
+        if(state.demoMode){
+          refund.id="refund-"+Date.now()+"-"+Math.random().toString(36).slice(2,7);state.transactions.push(refund);
+          const ids=new Set(future.map(t=>t.id));state.transactions=state.transactions.filter(t=>!ids.has(t.id));saveDemoTransactions();render();
+        }else{
+          const coll=firebase.firestore().collection("users").doc(state.user.uid).collection("transactions");
+          const batch=firebase.firestore().batch();
+          batch.set(coll.doc(),{...refund,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+          future.forEach(t=>batch.delete(coll.doc(t.id)));await batch.commit();
+        }
         $("refund-dialog").close();closeMovementDetails();showToast("Reembolso registrado e vinculado à compra original.");
       }catch(err){error.textContent="Não foi possível registrar o reembolso. Tente novamente.";error.classList.remove("hidden");}
     });
