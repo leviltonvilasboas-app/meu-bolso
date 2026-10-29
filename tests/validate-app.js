@@ -55,7 +55,24 @@ test('Parcelamento soma exatamente o valor informado, incluindo centavos restant
   }
 });
 
+test('Movimentações são ordenadas da mais recente para a mais antiga', () => {
+  assert.match(app, /\.sort\(\(a,b\)=>String\(b\.date\|\|"""\)\.localeCompare\(String\(a\.date\|\|"""\)\)/);
+});
+
+test('Exclusão usa modal do app em vez do confirm do navegador', () => {
+  assert.match(app, /function requestDeleteTransaction\(id\)/);
+  assert.match(app, /delete-confirm-dialog/);
+  assert.doesNotMatch(app, /if\(!confirm\(item\.isRefund/);
+  assert.match(html, /id="delete-confirm-dialog"/);
+});
+
+test('Movimentações abrem detalhes ao clicar na linha', () => {
+  assert.match(app, /data-open-detail=/);
+  assert.match(app, /openMovementDetails\(row\.dataset\.openDetail\)/);
+  assert.match(html, /id="movement-detail-dialog"/);
+});
+
 test('Cache do PWA tem versão atualizada', () => {
-  assert.match(sw, /meu-bolso-shell-v22/);
+  assert.match(sw, /meu-bolso-shell-v23/);
 });
 
