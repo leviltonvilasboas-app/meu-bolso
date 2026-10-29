@@ -54,3 +54,14 @@ body.legacy-search .legacy-content .transactions-panel{border-radius:17px}
  .transaction-dialog .dialog-actions{margin-top:auto;bottom:0;padding-top:15px}
  .transaction-dialog #save-button{flex:1}
 }
+
+/* Meu Bolso: lançamento simplificado e teclado numérico próprio */
+.amount-keypad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
+.amount-keypad button{height:48px;border:1px solid #dce7f1;border-radius:12px;background:#f7faff;color:#143d65;font-size:20px;font-weight:700}
+.amount-keypad button:active{background:#e1efff}
+.amount-keypad .keypad-spacer{display:block}
+.more-details-toggle{display:inline-flex;align-items:center;gap:7px;margin:0 0 12px;padding:8px 0;border:0;background:transparent;color:var(--blue);font-weight:700;font-size:13px}
+.more-details-fields{padding:12px 13px 2px;margin:0 0 12px;border-radius:13px;background:#f7faff;border:1px solid #e3edf7}
+.more-details-fields .field:last-child{margin-bottom:8px}
+.transaction-dialog .dialog-actions{margin-top:16px}
+@media(max-width:700px){.amount-keypad button{height:52px;font-size:22px}.transaction-dialog .dialog-actions{margin-top:auto}}
