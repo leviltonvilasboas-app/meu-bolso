@@ -6,7 +6,7 @@
   const COLORS = ["#216e50", "#75a98a", "#d69a51", "#6c91a5", "#bd6b58", "#8c80b8", "#94aa60", "#4d9b9b", "#c17d9c", "#7d8a81"];
   const ICONS = {"Alimentação":"◉","Moradia":"⌂","Transporte":"↗","Saúde":"✚","Lazer":"✦","Compras":"▤","Família":"♡","Viagens":"✈","Educação":"▣","Contas e serviços":"≋","Assinaturas":"↻","Impostos e taxas":"▧","Pets":"♧","Salário":"＋","Renda extra":"↗","Investimentos":"⌁","Reembolso":"↩","Venda":"◇","Presente":"♡","Outros":"•"};
   const $ = (id) => document.getElementById(id);
-  const state = { user: null, transactions: [], unsubscribe: null, editingId: null, pendingWrites: false, deferredInstall: null, persistenceReady: false, persistencePromise: Promise.resolve(), demoMode: false, hiddenMoney: false, shortcutDraft: [], amountDigits: "" };
+  const state = { user: null, transactions: [], unsubscribe: null, editingId: null, pendingWrites: false, deferredInstall: null, persistenceReady: false, persistencePromise: Promise.resolve(), demoMode: false, hiddenMoney: false, shortcutDraft: [], amountDigits: "", installmentMode: false };
   const money = (cents) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format((Number(cents) || 0) / 100);
   const localDate = () => { const d = new Date(); return [d.getFullYear(), String(d.getMonth()+1).padStart(2,"0"), String(d.getDate()).padStart(2,"0")].join("-"); };
   const currentMonth = () => localDate().slice(0,7);
@@ -110,7 +110,7 @@
 
   function filteredTransactions() {
     const month=activeMonth(), search=$("search-filter").value.trim().toLocaleLowerCase("pt-BR"), category=$("category-filter").value;
-    return state.transactions.filter(t => (!month || String(t.date||"").startsWith(month)) && (category==="all" || t.category===category) && (!search || [t.description,t.category,t.paymentMethod,t.cardName].some(v=>String(v||"").toLocaleLowerCase("pt-BR").includes(search))));
+    return state.transactions.filter(t => !t.isInstallmentPlan && (!month || String(t.date||"").startsWith(month)) && (category==="all" || t.category===category) && (!search || [t.description,t.category,t.paymentMethod,t.cardName].some(v=>String(v||"").toLocaleLowerCase("pt-BR").includes(search))));
   }
 
   function render() {
@@ -213,6 +213,10 @@
     state.amountDigits=transaction ? String(Math.max(0,Math.round(Number(transaction.amountCents)||0))) : "";
     $("amount-input").value=transaction ? formatAmountDigits(state.amountDigits) : "";
     $("amount-keypad").classList.add("hidden");
+    state.installmentMode=Boolean(transaction?.groupId);
+    $("toggle-installments").classList.toggle("hidden",Boolean(transaction));
+    $("toggle-installments").setAttribute("aria-expanded","false");
+    $("installment-fields").classList.add("hidden");
     $("toggle-more-details").setAttribute("aria-expanded",String(Boolean(transaction)));
     $("toggle-more-details").textContent=transaction?"− Menos detalhes":"＋ Mais detalhes";
     $("more-details-fields").classList.toggle("hidden",!transaction);
@@ -254,6 +258,33 @@
     const finalDescription=description || category || (type==="income"?"Receita":"Despesa");
     const payload={type,amountCents,date,description:finalDescription,category,paymentMethod:$("payment-input").value,cardName:$("payment-input").value==="Crédito"?$("card-name-input").value.trim():"",updatedAt:new Date().toISOString()};
     if(!state.editingId) payload.createdAt=new Date().toISOString();
+    if(state.installmentMode && !state.editingId) {
+      const count=Number($("installment-count").value);
+      if(!Number.isInteger(count)||count<2||count>36){error.textContent="Selecione uma quantidade válida de parcelas.";error.classList.remove("hidden");return;}
+      const groupId="parcelado-"+Date.now()+"-"+Math.random().toString(36).slice(2,8);
+      const base=Math.floor(amountCents/count), remainder=amountCents%count;
+      const [year,month,day]=date.split("-").map(Number);
+      const installments=Array.from({length:count},(_,i)=>{
+        const monthIndex=month-1+i, targetYear=year+Math.floor(monthIndex/12), targetMonth=monthIndex%12;
+        const lastDay=new Date(targetYear,targetMonth+1,0).getDate();
+        const targetDate=[targetYear,String(targetMonth+1).padStart(2,"0"),String(Math.min(day,lastDay)).padStart(2,"0")].join("-");
+        return {...payload,amountCents:base+(i===count-1?remainder:0),date:targetDate,description:finalDescription+" ("+(i+1)+"/"+count+")",groupId,installmentNumber:i+1,installmentCount:count,installmentTotalCents:amountCents,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+      });
+      const btn=$("save-button");btn.disabled=true;btn.textContent="Salvando parcelas…";
+      try {
+        if(state.demoMode) {
+          state.transactions.push(...installments.map((item,i)=>({...item,id:groupId+"-"+(i+1)})));
+          saveDemoTransactions();render();$("transaction-dialog").close();showToast(count+" parcelas registradas neste navegador.");
+        } else {
+          const coll=firebase.firestore().collection("users").doc(user.uid).collection("transactions");
+          const batch=firebase.firestore().batch();
+          installments.forEach(item=>{const ref=coll.doc();batch.set(ref,{...item,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});});
+          await batch.commit();$("transaction-dialog").close();showToast(count+" parcelas registradas.");
+        }
+      } catch(err) {error.textContent="Não foi possível registrar todas as parcelas. Tente novamente.";error.classList.remove("hidden");}
+      finally {btn.disabled=false;btn.textContent="Registrar despesa";}
+      return;
+    }
     const btn=$("save-button");btn.disabled=true;btn.textContent="Salvando…";
     try {
       if (state.demoMode) {
@@ -380,6 +411,7 @@
     $("amount-input").addEventListener("click",()=>$("amount-keypad").classList.remove("hidden"));
     $("amount-keypad").addEventListener("click",event=>{const key=event.target.closest("[data-keypad]");if(key)updateAmountFromKeypad(key.dataset.keypad);});
     $("toggle-more-details").addEventListener("click",()=>{const expanded=$("toggle-more-details").getAttribute("aria-expanded")==="true";$("toggle-more-details").setAttribute("aria-expanded",String(!expanded));$("more-details-fields").classList.toggle("hidden",expanded);$("toggle-more-details").textContent=expanded?"＋ Mais detalhes":"− Menos detalhes";});
+    $("toggle-installments").addEventListener("click",()=>{state.installmentMode=!state.installmentMode;$("toggle-installments").setAttribute("aria-expanded",String(state.installmentMode));$("installment-fields").classList.toggle("hidden",!state.installmentMode);$("toggle-installments").textContent=state.installmentMode?"− Compra parcelada":"＋ Parcelar compra";$("save-button").textContent=state.installmentMode?"Registrar compra parcelada":($("transaction-type").value==="income"?"Registrar receita":"Registrar despesa");});
     $("transaction-form").addEventListener("submit",saveTransaction);
     document.querySelectorAll(".type-option").forEach(btn=>btn.addEventListener("click",()=>{$("transaction-type").value=btn.dataset.type;document.querySelectorAll(".type-option").forEach(b=>b.classList.toggle("selected",b===btn));updateCategoryOptions(btn.dataset.type);$("dialog-title").textContent=btn.dataset.type==="income"?"Nova receita":"Nova despesa";$("save-button").textContent=btn.dataset.type==="income"?"Registrar receita":"Registrar despesa";$("transaction-category").classList.remove("field-invalid");}));
     $("payment-input").addEventListener("change",()=> $("card-name-field").classList.toggle("hidden",$("payment-input").value!=="Crédito"));
