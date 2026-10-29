@@ -142,7 +142,7 @@
     if(!item)return;
     selectedDetailId=id;
     const income=item.type==="income";
-    const linkedRefunds=state.transactions.filter(t=>t.refundOfId===item.id);
+    const linkedRefunds=state.transactions.filter(t=>t.refundOfId===item.id||(item.groupId&&t.refundOfGroupId===item.groupId));
     const linkedTo= item.refundOfId ? state.transactions.find(t=>t.id===item.refundOfId) : null;
     const details=[
       ["Tipo",income?"Receita":"Despesa"],
@@ -159,7 +159,7 @@
     const plan=groupId?state.transactions.find(t=>t.isInstallmentPlan&&t.groupId===groupId):null;
     const future=groupItems.filter(t=>t.installmentNumber>item.installmentNumber && t.date>localDate());
     $("installment-management").classList.toggle("hidden",!groupId||!item.installmentNumber);
-    $("open-refund-dialog").classList.toggle("hidden",item.type!=="expense"||Boolean(item.installmentNumber)||Boolean(item.refundOfId));
+    $("open-refund-dialog").classList.toggle("hidden",item.type!=="expense"||Boolean(item.isInstallmentPlan)||Boolean(item.refundOfId));
     if(groupId&&item.installmentNumber){
       $("installment-summary").textContent="Parcela "+item.installmentNumber+" de "+item.installmentCount+". Compra total: "+money(item.installmentTotalCents||plan?.installmentTotalCents||0)+". "+(future.length+" parcelas futuras, totalizando "+money(future.reduce((n,t)=>n+(Number(t.amountCents)||0),0))+".");
       $("cancel-future-installments").disabled=future.length===0;
@@ -451,7 +451,7 @@
     $("cancel-refund").addEventListener("click",()=>$("refund-dialog").close());
     $("refund-form").addEventListener("submit",async(event)=>{
       event.preventDefault();
-      const original=state.transactions.find(t=>t.id===selectedDetailId);if(!original||original.type!=="expense"||original.installmentNumber)return;
+      const original=state.transactions.find(t=>t.id===selectedDetailId);if(!original||original.type!=="expense")return;
       const value=Number(String($("refund-amount").value).replace(",","."));
       const error=$("refund-error");error.classList.add("hidden");
       if(!Number.isFinite(value)||value<=0){error.textContent="Informe um valor de reembolso maior que zero.";error.classList.remove("hidden");return;}
