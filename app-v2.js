@@ -6,7 +6,7 @@
   const COLORS = ["#216e50", "#75a98a", "#d69a51", "#6c91a5", "#bd6b58", "#8c80b8", "#94aa60", "#4d9b9b", "#c17d9c", "#7d8a81"];
   const ICONS = {"Alimentação":"◉","Moradia":"⌂","Transporte":"↗","Saúde":"✚","Lazer":"✦","Compras":"▤","Família":"♡","Viagens":"✈","Educação":"▣","Contas e serviços":"≋","Assinaturas":"↻","Impostos e taxas":"▧","Pets":"♧","Salário":"＋","Renda extra":"↗","Investimentos":"⌁","Reembolso":"↩","Venda":"◇","Presente":"♡","Outros":"•"};
   const $ = (id) => document.getElementById(id);
-  const state = { user: null, transactions: [], unsubscribe: null, editingId: null, pendingWrites: false, deferredInstall: null, persistenceReady: false, persistencePromise: Promise.resolve(), demoMode: false, hiddenMoney: false, shortcutDraft: [] };
+  const state = { user: null, transactions: [], unsubscribe: null, editingId: null, pendingWrites: false, deferredInstall: null, persistenceReady: false, persistencePromise: Promise.resolve(), demoMode: false, hiddenMoney: false, shortcutDraft: [], amountDigits: "" };
   const money = (cents) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format((Number(cents) || 0) / 100);
   const localDate = () => { const d = new Date(); return [d.getFullYear(), String(d.getMonth()+1).padStart(2,"0"), String(d.getDate()).padStart(2,"0")].join("-"); };
   const currentMonth = () => localDate().slice(0,7);
@@ -186,7 +186,12 @@
     $("transaction-form").reset();
     const type=transaction?.type||"expense"; $("transaction-type").value=type;
     document.querySelectorAll(".type-option").forEach(btn=>btn.classList.toggle("selected",btn.dataset.type===type));
-    $("amount-input").value=transaction ? ((Number(transaction.amountCents)||0)/100).toFixed(2) : "";
+    state.amountDigits=transaction ? String(Math.max(0,Math.round(Number(transaction.amountCents)||0))) : "";
+    $("amount-input").value=transaction ? formatAmountDigits(state.amountDigits) : "";
+    $("amount-keypad").classList.add("hidden");
+    $("toggle-more-details").setAttribute("aria-expanded",String(Boolean(transaction)));
+    $("toggle-more-details").textContent=transaction?"− Menos detalhes":"＋ Mais detalhes";
+    $("more-details-fields").classList.toggle("hidden",!transaction);
     $("description-input").value=transaction?.description||"";
     $("date-input").value=transaction?.date||localDate();
     updateCategoryOptions(type,transaction?.category);
@@ -199,18 +204,29 @@
     setTimeout(()=>$("amount-input").focus(),60);
   }
 
+  function formatAmountDigits(digits) {
+    const cents=Number(digits||"0");
+    return (cents/100).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+
+  function updateAmountFromKeypad(key) {
+    if(key==="delete") state.amountDigits=state.amountDigits.slice(0,-1);
+    else if(/^[0-9]$/.test(key) && state.amountDigits.length<11) state.amountDigits=(state.amountDigits+key).replace(/^0+(?=\d)/,"");
+    $("amount-input").value=state.amountDigits ? formatAmountDigits(state.amountDigits) : "";
+  }
+
   async function saveTransaction(event) {
     event.preventDefault();
     const user=state.user; if(!user){return;}
     const error=$("form-error"); error.classList.add("hidden");
-    const raw=String($("amount-input").value).trim().replace(",","."); const value=Number(raw);
+    const raw=String($("amount-input").value).trim().replace(/\./g,"").replace(",","."); const value=Number(raw);
     if(!Number.isFinite(value)||value<=0||value>999999999){error.textContent="Informe um valor maior que zero e dentro do limite permitido.";error.classList.remove("hidden");return;}
     const amountCents=Math.round(value*100);
     if(!Number.isSafeInteger(amountCents)||amountCents<=0){error.textContent="Confira o valor informado.";error.classList.remove("hidden");return;}
     const date=$("date-input").value; if(!date||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date)){error.textContent="Informe uma data válida.";error.classList.remove("hidden");return;}
     const type=$("transaction-type").value, description=$("description-input").value.trim(), category=$("transaction-category").value;
-    if(!description){error.textContent="Informe uma descrição para a movimentação.";error.classList.remove("hidden");return;}
-    const payload={type,amountCents,date,description,category,paymentMethod:$("payment-input").value,cardName:$("payment-input").value==="Crédito"?$("card-name-input").value.trim():"",updatedAt:new Date().toISOString()};
+    const finalDescription=description || category || (type==="income"?"Receita":"Despesa");
+    const payload={type,amountCents,date,description:finalDescription,category,paymentMethod:$("payment-input").value,cardName:$("payment-input").value==="Crédito"?$("card-name-input").value.trim():"",updatedAt:new Date().toISOString()};
     if(!state.editingId) payload.createdAt=new Date().toISOString();
     const btn=$("save-button");btn.disabled=true;btn.textContent="Salvando…";
     try {
@@ -335,6 +351,9 @@
     $("empty-add-button").addEventListener("click",()=>openDialog());
     $("close-dialog-button").addEventListener("click",()=>$("transaction-dialog").close());
     $("cancel-button").addEventListener("click",()=>$("transaction-dialog").close());
+    $("amount-input").addEventListener("click",()=>$("amount-keypad").classList.remove("hidden"));
+    $("amount-keypad").addEventListener("click",event=>{const key=event.target.closest("[data-keypad]");if(key)updateAmountFromKeypad(key.dataset.keypad);});
+    $("toggle-more-details").addEventListener("click",()=>{const expanded=$("toggle-more-details").getAttribute("aria-expanded")==="true";$("toggle-more-details").setAttribute("aria-expanded",String(!expanded));$("more-details-fields").classList.toggle("hidden",expanded);$("toggle-more-details").textContent=expanded?"＋ Mais detalhes":"− Menos detalhes";});
     $("transaction-form").addEventListener("submit",saveTransaction);
     document.querySelectorAll(".type-option").forEach(btn=>btn.addEventListener("click",()=>{$("transaction-type").value=btn.dataset.type;document.querySelectorAll(".type-option").forEach(b=>b.classList.toggle("selected",b===btn));updateCategoryOptions(btn.dataset.type);}));
     $("payment-input").addEventListener("change",()=> $("card-name-field").classList.toggle("hidden",$("payment-input").value!=="Crédito"));
