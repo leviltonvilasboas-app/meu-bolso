@@ -84,3 +84,5 @@ body.legacy-search .legacy-content .transactions-panel{border-radius:17px}
 .detail-actions{position:sticky;bottom:0;background:white;padding-top:14px}
 .detail-actions #detail-edit-button{background:var(--blue)}
 @media(max-width:700px){.movement-detail-dialog{width:100%;max-width:none;max-height:100dvh;height:auto;min-height:55dvh;border-radius:20px 20px 0 0;margin:auto 0 0}.detail-dialog-content{padding:23px 20px calc(20px + env(safe-area-inset-bottom))}.movement-detail-row{font-size:14px}}
+
+.installment-fields .muted{font-size:12px;line-height:1.55;margin:4px 0 10px;color:#60778e}
