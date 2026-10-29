@@ -443,6 +443,7 @@
     $("detail-edit-button").addEventListener("click",()=>{const item=state.transactions.find(t=>t.id===selectedDetailId);if(item){const id=item.id;closeMovementDetails();openDialog(item);state.editingId=id;}});
     $("open-refund-dialog").addEventListener("click",()=>{
       const item=state.transactions.find(t=>t.id===selectedDetailId);if(!item||item.type!=="expense"||item.isInstallmentPlan)return;
+      refundEditingId=null;refundSourceId=item.id;
       const plan=item.groupId?state.transactions.find(t=>t.isInstallmentPlan&&t.groupId===item.groupId):item;
       const linkId=plan?.id||item.id;
       const existing=state.transactions.filter(t=>t.refundOfId===linkId||(item.groupId&&t.refundOfGroupId===item.groupId));
@@ -479,13 +480,23 @@
 
     $("refund-form").addEventListener("submit",async(event)=>{
       event.preventDefault();
-      const source=state.transactions.find(t=>t.id===selectedDetailId);
+      const source=state.transactions.find(t=>t.id===(refundSourceId||selectedDetailId));
       if(!source||source.type!=="expense"||source.isInstallmentPlan)return;
       const plan=source.groupId?state.transactions.find(t=>t.isInstallmentPlan&&t.groupId===source.groupId):source;
       const original=plan||source;
       const amountCents=Math.round(Number(String($("refund-amount").value).replace(",", "."))*100);
       const error=$("refund-error");error.classList.add("hidden");
       if(!Number.isFinite(amountCents)||amountCents<=0||amountCents>999999999){error.textContent="Informe um valor de reembolso válido.";error.classList.remove("hidden");return;}
+      if(refundEditingId){
+        const editedRefund=state.transactions.find(t=>t.id===refundEditingId);
+        if(!editedRefund){error.textContent="O reembolso que você está corrigindo não foi encontrado. Feche e abra os detalhes novamente.";error.classList.remove("hidden");return;}
+        try{
+          const changes={amountCents,date:$("refund-date").value||localDate(),updatedAt:new Date().toISOString()};
+          if(state.demoMode){state.transactions=state.transactions.map(t=>t.id===refundEditingId?{...t,...changes}:t);saveDemoTransactions();render();}
+          else{await firebase.firestore().collection("users").doc(state.user.uid).collection("transactions").doc(refundEditingId).set({...changes,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});}
+          $("refund-dialog").close();refundEditingId=null;refundSourceId=null;closeMovementDetails();showToast("Reembolso corrigido.");return;
+        }catch(err){error.textContent="Não foi possível corrigir o reembolso. Tente novamente.";error.classList.remove("hidden");return;}
+      }
       const groupId=source.groupId||null;
       const existing=state.transactions.filter(t=>t.refundOfId===original.id||(groupId&&t.refundOfGroupId===groupId));
       const refunded=existing.reduce((n,t)=>n+(Number(t.amountCents)||0),0);
@@ -507,7 +518,7 @@
           batch.set(coll.doc(),{...refund,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
           future.forEach(t=>batch.delete(coll.doc(t.id)));await batch.commit();
         }
-        $("refund-dialog").close();closeMovementDetails();showToast("Reembolso registrado e vinculado à compra original.");
+        $("refund-dialog").close();refundEditingId=null;refundSourceId=null;closeMovementDetails();showToast("Reembolso registrado e vinculado à compra original.");
       }catch(err){error.textContent="Não foi possível registrar o reembolso. Tente novamente.";error.classList.remove("hidden");}
     });
     $("detail-edit-refund-button").addEventListener("click",()=>{
