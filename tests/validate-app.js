@@ -38,7 +38,7 @@ test('Fluxo de reembolso não contém a variável inexistente editingRefund', ()
 });
 
 test('Correção de reembolso atualiza o lançamento existente sem criar outro', () => {
-  assert.match(app, /if\(refundEditingId\)[\s\\S]{0,1000}doc\(refundEditingId\)\.set/);
+  assert.match(app, /if\(refundEditingId\)[\s\S]{0,1000}doc\(refundEditingId\)\.set/);
   assert.match(app, /Reembolso corrigido\./);
 });
 
