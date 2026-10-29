@@ -1,4 +1,4 @@
-const CACHE_NAME = "meu-bolso-shell-v11";
+const CACHE_NAME = "meu-bolso-shell-v12";
 const SCOPE_URL = self.registration.scope;
 const APP_FILES = [
   new URL("index.html", SCOPE_URL).href,
