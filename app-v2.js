@@ -154,7 +154,7 @@
       ...(item.cardName?[["Cartão",item.cardName]]:[]),
       ["Descrição",item.description||"Sem descrição"],
       ...(linkedTo?[["Compra original",linkedTo.description||linkedTo.category||"Despesa"],["Reembolso vinculado","Sim"]]:[]),
-      ...(linkedRefunds.length?[["Reembolsos registrados",linkedRefunds.length+" · "+money(linkedRefunds.reduce((n,t)=>n+(Number(t.amountCents)||0),0))]]:[])
+      ...(linkedRefunds.length?[["Total de reembolsos",linkedRefunds.length+" · "+money(linkedRefunds.reduce((n,t)=>n+(Number(t.amountCents)||0),0))],...linkedRefunds.map(t=>["Reembolso em "+niceDate(t.date),money(t.amountCents)])]:[])
     ];
     const groupId=item.groupId;
     const groupItems=groupId?state.transactions.filter(t=>t.groupId===groupId&&!t.isInstallmentPlan).sort((a,b)=>(a.installmentNumber||0)-(b.installmentNumber||0)):[];
