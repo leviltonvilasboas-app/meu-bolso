@@ -135,7 +135,7 @@
     renderHomeSummary();
   }
 
-  let selectedDetailId = null;
+  let selectedDetailId = null;\n  let refundEditingId = null;\n  let refundSourceId = null;
 
   function openMovementDetails(id) {
     const item=state.transactions.find(t=>t.id===id);
@@ -159,7 +159,7 @@
     const plan=groupId?state.transactions.find(t=>t.isInstallmentPlan&&t.groupId===groupId):null;
     const future=groupItems.filter(t=>t.installmentNumber>item.installmentNumber && t.date>localDate());
     $("installment-management").classList.toggle("hidden",!groupId||!item.installmentNumber);
-    $("open-refund-dialog").classList.toggle("hidden",item.type!=="expense"||Boolean(item.isInstallmentPlan)||Boolean(item.refundOfId));
+    $("open-refund-dialog").classList.toggle("hidden",item.type!=="expense"||Boolean(item.isInstallmentPlan)||Boolean(item.refundOfId));\n    $("detail-edit-refund-button").classList.toggle("hidden",!item.refundOfId);
     if(groupId&&item.installmentNumber){
       $("installment-summary").textContent="Parcela "+item.installmentNumber+" de "+item.installmentCount+". Compra total: "+money(item.installmentTotalCents||plan?.installmentTotalCents||0)+". "+(future.length+" parcelas futuras, totalizando "+money(future.reduce((n,t)=>n+(Number(t.amountCents)||0),0))+".");
       $("cancel-future-installments").disabled=future.length===0;
@@ -468,11 +468,11 @@
       if(existing.some(t=>Number(t.amountCents)===amountCents)&&!confirm("Já existe um reembolso deste valor para esta compra. Deseja registrar outro?"))return;
       const totalPurchase=Number(original.installmentTotalCents||original.amountCents||0);
       if(amountCents+refunded>totalPurchase&&!confirm("O total reembolsado ultrapassará o valor original da compra. Deseja continuar?"))return;
-      const cancelFuture=Boolean(source.installmentNumber)&&document.querySelector('input[name="refund-future-treatment"]:checked')?.value==="cancel";
+      const cancelFuture=!editingRefund&&Boolean(source.installmentNumber)&&document.querySelector('input[name="refund-future-treatment"]:checked')?.value==="cancel";
       const future=cancelFuture?state.transactions.filter(t=>t.groupId===groupId&&!t.isInstallmentPlan&&t.installmentNumber>source.installmentNumber&&t.date>localDate()):[];
       const futureTotal=future.reduce((n,t)=>n+(Number(t.amountCents)||0),0);
       if(future.length&&!confirm("O reembolso será registrado e "+future.length+" parcelas futuras ("+money(futureTotal)+") serão canceladas. As parcelas anteriores e a selecionada serão preservadas. Confirmar?"))return;
-      const refund={type:"income",amountCents,date:localDate(),description:"Reembolso: "+(source.description||source.category||"Despesa original"),category:"Reembolso",paymentMethod:source.paymentMethod||"Não informada",cardName:source.cardName||"",refundOfId:original.id,refundOfGroupId:groupId,refundOfInstallmentId:source.installmentNumber?source.id:null,isRefund:true,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+      const refund={type:"income",amountCents,date:$("refund-date").value||localDate(),description:"Reembolso: "+(source.description||source.category||"Despesa original"),category:"Reembolso",paymentMethod:source.paymentMethod||"Não informada",cardName:source.cardName||"",refundOfId:original.id,refundOfGroupId:groupId,refundOfInstallmentId:source.installmentNumber?source.id:null,isRefund:true,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
       try{
         if(state.demoMode){
           refund.id="refund-"+Date.now()+"-"+Math.random().toString(36).slice(2,7);state.transactions.push(refund);
@@ -485,6 +485,14 @@
         }
         $("refund-dialog").close();closeMovementDetails();showToast("Reembolso registrado e vinculado à compra original.");
       }catch(err){error.textContent="Não foi possível registrar o reembolso. Tente novamente.";error.classList.remove("hidden");}
+    });
+    $("detail-edit-refund-button").addEventListener("click",()=>{
+      const refund=state.transactions.find(t=>t.id===selectedDetailId);if(!refund?.refundOfId)return;
+      refundEditingId=refund.id;refundSourceId=refund.refundOfInstallmentId||refund.refundOfId;
+      $("refund-original-summary").textContent="Corrigindo um reembolso já registrado. A alteração será refletida no saldo.";
+      $("refund-amount").value=(Number(refund.amountCents||0)/100).toFixed(2);$("refund-date").value=refund.date||localDate();
+      $("refund-installment-options").classList.add("hidden");$("refund-preview").textContent="A correção atualizará o valor e a data do reembolso existente, sem criar outro lançamento.";
+      closeMovementDetails();$("refund-dialog").showModal();
     });
     $("detail-delete-button").addEventListener("click",async()=>{const id=selectedDetailId;if(!id)return;closeMovementDetails();await deleteTransaction(id);});
     $("cancel-future-installments").addEventListener("click",async()=>{
