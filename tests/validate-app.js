@@ -22,28 +22,28 @@ test('JavaScript do aplicativo e service worker têm sintaxe válida', () => {
 });
 
 test('IDs HTML são únicos', () => {
-  const ids = [...html.matchAll(/\\bid=["']([^"']+)["']/g)].map(m => m[1]);
+  const ids = [...html.matchAll(/\bid=["']([^"']+)["']/g)].map(m => m[1]);
   assert.equal(ids.length, new Set(ids).size, 'há IDs duplicados no HTML');
 });
 
 test('Referências $(\"id\") existem no HTML', () => {
-  const ids = new Set([...html.matchAll(/\\bid=["']([^"']+)["']/g)].map(m => m[1]));
-  const refs = [...new Set([...app.matchAll(/\\$\\("([^"]+)"\\)/g)].map(m => m[1]))];
+  const ids = new Set([...html.matchAll(/\bid=["']([^"']+)["']/g)].map(m => m[1]));
+  const refs = [...new Set([...app.matchAll(/\$\("([^"]+)"\)/g)].map(m => m[1]))];
   assert.deepEqual(refs.filter(id => !ids.has(id)), []);
 });
 
 test('Fluxo de reembolso não contém a variável inexistente editingRefund', () => {
-  assert.doesNotMatch(app, /\\beditingRefund\\b/);
-  assert.match(app, /const cancelFuture=!refundEditingId&&Boolean\\(source\\.installmentNumber\\)/);
+  assert.doesNotMatch(app, /\beditingRefund\b/);
+  assert.match(app, /const cancelFuture=!refundEditingId&&Boolean\(source\.installmentNumber\)/);
 });
 
 test('Correção de reembolso atualiza o lançamento existente sem criar outro', () => {
-  assert.match(app, /if\\(refundEditingId\\)[\\s\\S]{0,1000}doc\\(refundEditingId\\)\\.set/);
-  assert.match(app, /Reembolso corrigido\\./);
+  assert.match(app, /if\(refundEditingId\)[\s\\S]{0,1000}doc\(refundEditingId\)\.set/);
+  assert.match(app, /Reembolso corrigido\./);
 });
 
 test('Cancelamento de parcelas futuras usa gravação em lote no Firestore', () => {
-  assert.match(app, /future\\.forEach\\(t=>batch\\.delete\\(coll\\.doc\\(t\\.id\\)\\)\\);await batch\\.commit\\(\\)/);
+  assert.match(app, /future\.forEach\(t=>batch\.delete\(coll\.doc\(t\.id\)\)\);await batch\.commit\(\)/);
 });
 
 test('Parcelamento soma exatamente o valor informado, incluindo centavos restantes', () => {
