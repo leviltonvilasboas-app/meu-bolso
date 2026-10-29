@@ -147,6 +147,16 @@
       <div class="dialog-actions detail-actions"><button id="detail-delete-button" class="button button-quiet" type="button">Excluir</button><button id="detail-edit-button" class="button button-primary" type="button">Editar lançamento</button></div>
     </div>
   </dialog>
+  <dialog id="delete-confirm-dialog" class="movement-detail-dialog delete-confirm-dialog" aria-labelledby="delete-confirm-title">
+    <div class="detail-dialog-content">
+      <div class="dialog-heading"><div><p class="eyebrow">CONFIRMAÇÃO</p><h2 id="delete-confirm-title">Excluir lançamento?</h2></div><button id="cancel-delete-close" class="close-button" type="button" aria-label="Fechar">×</button></div>
+      <p id="delete-confirm-message" class="delete-confirm-message">Esta ação não poderá ser desfeita.</p>
+      <div class="dialog-actions">
+        <button id="cancel-delete-button" class="button button-quiet" type="button">Cancelar</button>
+        <button id="confirm-delete-button" class="button button-danger" type="button">Excluir lançamento</button>
+      </div>
+    </div>
+  </dialog>
   <dialog id="refund-dialog" class="movement-detail-dialog">
     <form id="refund-form" class="detail-dialog-content">
       <div class="dialog-heading"><div><p class="eyebrow">ESTORNO / REEMBOLSO</p><h2>Registrar reembolso</h2></div><button id="close-refund-dialog" class="close-button" type="button" aria-label="Fechar">×</button></div>
