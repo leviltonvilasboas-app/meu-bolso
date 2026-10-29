@@ -153,7 +153,7 @@
       <p id="refund-original-summary" class="refund-summary"></p>
       <label class="field-label" for="refund-amount">Valor devolvido (R$)</label>
       <input id="refund-amount" class="text-input" type="number" min="0.01" step="0.01" inputmode="decimal" required placeholder="0,00">
-      <p id="refund-preview" class="refund-preview"></p>
+      <div id="refund-installment-options" class="refund-installment-options hidden"><p>Tratamento das parcelas futuras</p><label><input type="radio" name="refund-future-treatment" value="keep" checked> Manter as parcelas futuras</label><label><input type="radio" name="refund-future-treatment" value="cancel"> Cancelar as parcelas futuras</label></div><p id="refund-preview" class="refund-preview"></p>
       <p id="refund-error" class="form-error hidden" role="alert"></p>
       <div class="dialog-actions"><button id="cancel-refund" class="button button-quiet" type="button">Cancelar</button><button class="button button-primary" type="submit">Confirmar reembolso</button></div>
     </form>
