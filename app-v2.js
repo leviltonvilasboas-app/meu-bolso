@@ -110,7 +110,7 @@
 
   function filteredTransactions() {
     const month=activeMonth(), search=$("search-filter").value.trim().toLocaleLowerCase("pt-BR"), category=$("category-filter").value;
-    return state.transactions.filter(t => !t.isInstallmentPlan && (!month || String(t.date||"").startsWith(month)) && (category==="all" || t.category===category) && (!search || [t.description,t.category,t.paymentMethod,t.cardName].some(v=>String(v||"").toLocaleLowerCase("pt-BR").includes(search))));
+    return state.transactions.filter(t => !t.isInstallmentPlan && (!month || String(t.date||"").startsWith(month)) && (category==="all" || t.category===category) && (!search || [t.description,t.category,t.paymentMethod,t.cardName].some(v=>String(v||"").toLocaleLowerCase("pt-BR").includes(search)))).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")) || ((b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0)));
   }
 
   function render() {
@@ -136,6 +136,7 @@
   }
 
   let selectedDetailId = null;
+  let pendingDeleteId = null;
   let refundEditingId = null;
   let refundSourceId = null;
 
@@ -339,9 +340,16 @@
     } finally {btn.disabled=false;btn.textContent=state.editingId?"Salvar alterações":"Salvar movimentação";}
   }
 
+  function requestDeleteTransaction(id) {
+    const item=state.transactions.find(t=>t.id===id); if(!item)return;
+    pendingDeleteId=id;
+    $("delete-confirm-title").textContent=item.isRefund?"Excluir reembolso?":"Excluir lançamento?";
+    $("delete-confirm-message").textContent=item.isRefund?"O reembolso de "+money(item.amountCents)+" será excluído e o saldo financeiro será ajustado.":"“"+(item.description||item.category||"Esta movimentação")+"” será excluído. Esta ação não poderá ser desfeita.";
+    $("delete-confirm-dialog").showModal();
+  }
+
   async function deleteTransaction(id) {
     const item=state.transactions.find(t=>t.id===id); if(!item)return;
-    if(!confirm(item.isRefund?"Excluir este reembolso de "+money(item.amountCents)+"? O saldo financeiro será ajustado e esta ação não poderá ser desfeita.":"Excluir “"+(item.description||item.category||"esta movimentação")+"”? Essa ação não poderá ser desfeita."))return;
     try {
       if (state.demoMode) {
         state.transactions = state.transactions.filter(t => t.id !== id);
@@ -529,7 +537,9 @@
       $("refund-installment-options").classList.add("hidden");$("refund-preview").textContent="A correção atualizará o valor e a data do reembolso existente, sem criar outro lançamento.";
       closeMovementDetails();$("refund-dialog").showModal();updateRefundPreview();
     });
-    $("detail-delete-button").addEventListener("click",async()=>{const id=selectedDetailId;if(!id)return;closeMovementDetails();await deleteTransaction(id);});
+    $("detail-delete-button").addEventListener("click",()=>{const id=selectedDetailId;if(!id)return;closeMovementDetails();requestDeleteTransaction(id);});
+    $("cancel-delete-button").addEventListener("click",()=>{pendingDeleteId=null;$("delete-confirm-dialog").close();});
+    $("confirm-delete-button").addEventListener("click",async()=>{const id=pendingDeleteId;if(!id)return;$("delete-confirm-dialog").close();pendingDeleteId=null;await deleteTransaction(id);});
     $("cancel-future-installments").addEventListener("click",async()=>{
       const item=state.transactions.find(t=>t.id===selectedDetailId);if(!item?.groupId||!item.installmentNumber)return;
       const group=state.transactions.filter(t=>t.groupId===item.groupId&&!t.isInstallmentPlan);
