@@ -1,0 +1,44 @@
+name: Validate Meu Bolso
+
+on:
+  push:
+    branches:
+      - melhorias-ux-meu-bolso
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validar sintaxe JavaScript
+        run: |
+          node --check app-v2.js
+          node --check sw.js
+      - name: Verificar referências de elementos HTML
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const js = fs.readFileSync('app-v2.js', 'utf8');
+          const ids = new Set([...html.matchAll(/\bid=["']([^"']+)["']/g)].map(m => m[1]));
+          const duplicates = [...html.matchAll(/\bid=["']([^"']+)["']/g)].map(m => m[1]).filter((id, i, all) => all.indexOf(id) !== i);
+          const referenced = [...js.matchAll(/\$\("([^"]+)"\)/g)].map(m => m[1]);
+          const missing = [...new Set(referenced)].filter(id => !ids.has(id));
+          if (duplicates.length) {
+            console.error('IDs duplicados:', [...new Set(duplicates)].join(', '));
+            process.exitCode = 1;
+          }
+          if (missing.length) {
+            console.error('IDs usados no JavaScript e ausentes no HTML:', missing.join(', '));
+            process.exitCode = 1;
+          }
+          if (!duplicates.length && !missing.length) console.log('Referências de elementos HTML válidas.');
+          NODE
