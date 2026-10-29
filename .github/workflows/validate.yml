@@ -32,6 +32,15 @@ jobs:
           const duplicates = [...html.matchAll(/\bid=["']([^"']+)["']/g)].map(m => m[1]).filter((id, i, all) => all.indexOf(id) !== i);
           const referenced = [...js.matchAll(/\$\("([^"]+)"\)/g)].map(m => m[1]);
           const missing = [...new Set(referenced)].filter(id => !ids.has(id));
+          const refundVariableTypo = /\\beditingRefund\\b/.test(js);
+          if (refundVariableTypo) {
+            console.error('Referência inválida editingRefund encontrada no fluxo de reembolso.');
+            process.exitCode = 1;
+          }
+          if (!js.includes('const cancelFuture=!refundEditingId&&Boolean(source.installmentNumber)')) {
+            console.error('A regra para cancelar parcelas futuras não está protegida durante a edição de reembolso.');
+            process.exitCode = 1;
+          }
           if (duplicates.length) {
             console.error('IDs duplicados:', [...new Set(duplicates)].join(', '));
             process.exitCode = 1;
