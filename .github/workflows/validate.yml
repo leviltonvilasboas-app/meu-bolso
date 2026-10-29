@@ -22,6 +22,8 @@ jobs:
         run: |
           node --check app-v2.js
           node --check sw.js
+      - name: Executar testes automatizados
+        run: node tests/validate-app.js
       - name: Verificar referências de elementos HTML
         run: |
           node <<'NODE'
