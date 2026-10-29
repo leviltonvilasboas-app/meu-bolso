@@ -91,3 +91,8 @@ body.legacy-search .legacy-content .transactions-panel{border-radius:17px}
 .installment-management p{margin:0 0 10px;color:#435d76;font-size:12px;line-height:1.5}
 .installment-management button{width:100%;border:1px solid #d8e2ec}
 .installment-position{margin:12px 0 0;color:#60778e;font-size:12px}
+
+.refund-action-row{margin-top:12px}
+.refund-action-row button{width:100%;border:1px solid #d8e2ec}
+.refund-summary,.refund-preview{font-size:13px;line-height:1.5;color:var(--muted,#60778e)}
+#refund-amount{width:100%;box-sizing:border-box;margin:8px 0 12px;padding:13px;border:1px solid #d4dfe8;border-radius:10px;font:inherit;background:var(--surface,#fff);color:var(--text,#243444)}
