@@ -127,12 +127,36 @@
     const shown=filteredTransactions(); $("transaction-count-badge").textContent=shown.length;
     $("transactions-list").innerHTML=shown.map(t=>{
       const income=t.type==="income", symbol=ICONS[t.category]||"•", amount=money(t.amountCents);
-      return '<article class="transaction-row"><span class="transaction-symbol '+(income?"income":"expense")+'">'+symbol+'</span><div class="transaction-main"><span class="transaction-title">'+escapeHTML(t.description||t.category||"Movimentação")+'</span><span class="transaction-meta">'+escapeHTML(t.category||"Sem categoria")+' · '+escapeHTML(niceDate(t.date))+(t.paymentMethod?" · "+escapeHTML(t.paymentMethod):"")+(t.cardName?" · "+escapeHTML(t.cardName):"")+'</span></div><span class="transaction-amount '+(income?"income":"expense")+'">'+(income?"+":"−")+amount+'</span><div class="row-actions"><button class="icon-action" type="button" data-edit="'+escapeHTML(t.id)+'" aria-label="Editar lançamento" title="Editar">✎</button><button class="icon-action" type="button" data-delete="'+escapeHTML(t.id)+'" aria-label="Excluir lançamento" title="Excluir">×</button></div></article>';
+      return '<button class="transaction-row transaction-row-button" type="button" data-open-detail="'+escapeHTML(t.id)+'" aria-label="Ver detalhes de '+escapeHTML(t.description||t.category||"movimentação")+'"><span class="transaction-symbol '+(income?"income":"expense")+'">'+symbol+'</span><span class="transaction-main"><span class="transaction-title">'+escapeHTML(t.description||t.category||"Movimentação")+'</span><span class="transaction-meta">'+escapeHTML(t.category||"Sem categoria")+' · '+escapeHTML(niceDate(t.date))+(t.paymentMethod?" · "+escapeHTML(t.paymentMethod):"")+(t.cardName?" · "+escapeHTML(t.cardName):"")+'</span></span><span class="transaction-amount '+(income?"income":"expense")+'">'+(income?"+":"−")+amount+'</span><span class="transaction-detail-arrow" aria-hidden="true">›</span></button>';
     }).join("");
     $("empty-state").classList.toggle("show",shown.length===0); $("transactions-list").classList.toggle("hidden",shown.length===0);
     renderCategoryChart(expenses,expenseTotal);
     renderInsights(month,allInMonth,expenses,incomes,expenseTotal,incomeTotal,net);
     renderHomeSummary();
+  }
+
+  let selectedDetailId = null;
+
+  function openMovementDetails(id) {
+    const item=state.transactions.find(t=>t.id===id);
+    if(!item)return;
+    selectedDetailId=id;
+    const income=item.type==="income";
+    const details=[
+      ["Tipo",income?"Receita":"Despesa"],
+      ["Categoria",item.category||"Sem categoria"],
+      ["Data",niceDate(item.date)],
+      ["Forma de pagamento",item.paymentMethod||"Não informada"],
+      ...(item.cardName?[["Cartão",item.cardName]]:[]),
+      ["Descrição",item.description||"Sem descrição"]
+    ];
+    $("movement-detail-content").innerHTML='<div class="detail-amount '+(income?"income":"expense")+'">'+(income?"+":"−")+money(item.amountCents)+'</div><div class="movement-detail-list">'+details.map(([label,value])=>'<div class="movement-detail-row"><span>'+escapeHTML(label)+'</span><strong>'+escapeHTML(value)+'</strong></div>').join("")+'</div>';
+    $("movement-detail-dialog").showModal();
+  }
+
+  function closeMovementDetails() {
+    $("movement-detail-dialog").close();
+    selectedDetailId=null;
   }
 
   function renderCategoryChart(expenses,total) {
@@ -360,7 +384,10 @@
     document.querySelectorAll(".type-option").forEach(btn=>btn.addEventListener("click",()=>{$("transaction-type").value=btn.dataset.type;document.querySelectorAll(".type-option").forEach(b=>b.classList.toggle("selected",b===btn));updateCategoryOptions(btn.dataset.type);$("dialog-title").textContent=btn.dataset.type==="income"?"Nova receita":"Nova despesa";$("save-button").textContent=btn.dataset.type==="income"?"Registrar receita":"Registrar despesa";$("transaction-category").classList.remove("field-invalid");}));
     $("payment-input").addEventListener("change",()=> $("card-name-field").classList.toggle("hidden",$("payment-input").value!=="Crédito"));
     ["month-filter","search-filter","category-filter"].forEach(id=>$(id).addEventListener("input",render));
-    $("transactions-list").addEventListener("click",event=>{const edit=event.target.closest("[data-edit]"),del=event.target.closest("[data-delete]");if(edit){const t=state.transactions.find(item=>item.id===edit.dataset.edit);if(t)openDialog(t);}if(del)deleteTransaction(del.dataset.delete);});
+    $("transactions-list").addEventListener("click",event=>{const row=event.target.closest("[data-open-detail]");if(row)openMovementDetails(row.dataset.openDetail);});
+    $("close-detail-dialog").addEventListener("click",closeMovementDetails);
+    $("detail-edit-button").addEventListener("click",()=>{const item=state.transactions.find(t=>t.id===selectedDetailId);if(item){const id=item.id;closeMovementDetails();openDialog(item);state.editingId=id;}});
+    $("detail-delete-button").addEventListener("click",async()=>{const id=selectedDetailId;if(!id)return;closeMovementDetails();await deleteTransaction(id);});
     $("export-button").addEventListener("click",exportCSV);
     window.addEventListener("online",()=>{setConnection("pending","Reconectando…");if(state.user)showToast("Conexão restaurada. Sincronizando alterações.");});
     window.addEventListener("offline",()=>setConnection("offline","Offline — alterações ficam pendentes"));
