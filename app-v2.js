@@ -516,7 +516,7 @@
       $("refund-original-summary").textContent="Corrigindo um reembolso já registrado. A alteração será refletida no saldo.";
       $("refund-amount").value=(Number(refund.amountCents||0)/100).toFixed(2);$("refund-date").value=refund.date||localDate();
       $("refund-installment-options").classList.add("hidden");$("refund-preview").textContent="A correção atualizará o valor e a data do reembolso existente, sem criar outro lançamento.";
-      closeMovementDetails();$("refund-dialog").showModal();
+      closeMovementDetails();$("refund-dialog").showModal();updateRefundPreview();
     });
     $("detail-delete-button").addEventListener("click",async()=>{const id=selectedDetailId;if(!id)return;closeMovementDetails();await deleteTransaction(id);});
     $("cancel-future-installments").addEventListener("click",async()=>{
