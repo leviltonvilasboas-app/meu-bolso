@@ -452,10 +452,31 @@
       $("refund-amount").value="";$("refund-date").value=localDate();$("refund-error").classList.add("hidden");
       $("refund-installment-options").classList.toggle("hidden",!item.installmentNumber);
       $("refund-preview").textContent="O reembolso será registrado como receita vinculada à compra original. O histórico da compra será preservado.";
-      $("refund-dialog").showModal();$("refund-amount").focus();
+      $("refund-dialog").showModal();updateRefundPreview();$("refund-amount").focus();
     });
     $("close-refund-dialog").addEventListener("click",()=>$("refund-dialog").close());
     $("cancel-refund").addEventListener("click",()=>$("refund-dialog").close());
+    const updateRefundPreview=()=>{
+      const source=state.transactions.find(t=>t.id===(refundSourceId||selectedDetailId));
+      if(!source)return;
+      const plan=source.groupId?state.transactions.find(t=>t.isInstallmentPlan&&t.groupId===source.groupId):source;
+      const original=plan||source;
+      const groupId=source.groupId||null;
+      const existing=state.transactions.filter(t=>(t.refundOfId===original.id||(groupId&&t.refundOfGroupId===groupId))&&t.id!==refundEditingId);
+      const refunded=existing.reduce((n,t)=>n+(Number(t.amountCents)||0),0);
+      const value=Math.round(Number(String($("refund-amount").value||"0").replace(",", "."))*100);
+      const total=Number(original.installmentTotalCents||original.amountCents||0);
+      const parts=["Este reembolso: "+money(Math.max(0,value))+".","Total já reembolsado após salvar: "+money(refunded+Math.max(0,value))+".","Valor original da compra: "+money(total)+"."];
+      const cancel=document.querySelector('input[name="refund-future-treatment"]:checked')?.value==="cancel";
+      if(source.installmentNumber&&cancel){
+        const future=state.transactions.filter(t=>t.groupId===groupId&&!t.isInstallmentPlan&&t.installmentNumber>source.installmentNumber&&t.date>localDate());
+        parts.push(future.length+" parcelas futuras serão canceladas ("+money(future.reduce((n,t)=>n+(Number(t.amountCents)||0),0))+").");
+      }else if(source.installmentNumber)parts.push("As parcelas futuras serão mantidas.");
+      $("refund-preview").textContent=parts.join(" ");
+    };
+    $("refund-amount").addEventListener("input",updateRefundPreview);
+    document.querySelectorAll('input[name="refund-future-treatment"]').forEach(el=>el.addEventListener("change",updateRefundPreview));
+
     $("refund-form").addEventListener("submit",async(event)=>{
       event.preventDefault();
       const source=state.transactions.find(t=>t.id===selectedDetailId);
