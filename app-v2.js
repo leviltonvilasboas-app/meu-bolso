@@ -539,6 +539,7 @@
     });
     $("detail-delete-button").addEventListener("click",()=>{const id=selectedDetailId;if(!id)return;closeMovementDetails();requestDeleteTransaction(id);});
     $("cancel-delete-button").addEventListener("click",()=>{pendingDeleteId=null;$("delete-confirm-dialog").close();});
+    $("cancel-delete-close").addEventListener("click",()=>{pendingDeleteId=null;$("delete-confirm-dialog").close();});
     $("confirm-delete-button").addEventListener("click",async()=>{const id=pendingDeleteId;if(!id)return;$("delete-confirm-dialog").close();pendingDeleteId=null;await deleteTransaction(id);});
     $("cancel-future-installments").addEventListener("click",async()=>{
       const item=state.transactions.find(t=>t.id===selectedDetailId);if(!item?.groupId||!item.installmentNumber)return;
