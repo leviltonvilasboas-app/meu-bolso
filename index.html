@@ -133,6 +133,13 @@
       <div class="dialog-actions"><button id="cancel-button" class="button button-quiet" type="button">Cancelar</button><button id="save-button" class="button button-primary" type="submit">Salvar movimentação</button></div>
     </form>
   </dialog>
+  <dialog id="movement-detail-dialog" class="movement-detail-dialog">
+    <div class="detail-dialog-content">
+      <div class="dialog-heading"><div><p class="eyebrow">MOVIMENTAÇÃO</p><h2>Detalhes do lançamento</h2></div><button id="close-detail-dialog" class="close-button" type="button" aria-label="Fechar">×</button></div>
+      <div id="movement-detail-content"></div>
+      <div class="dialog-actions detail-actions"><button id="detail-delete-button" class="button button-quiet" type="button">Excluir</button><button id="detail-edit-button" class="button button-primary" type="button">Editar lançamento</button></div>
+    </div>
+  </dialog>
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
   <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
