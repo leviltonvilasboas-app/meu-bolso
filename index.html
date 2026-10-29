@@ -126,6 +126,11 @@
         <div class="field"><label for="transaction-category">Categoria</label><select id="transaction-category"></select></div>
         <div class="field"><label for="payment-input">Conta ou forma de pagamento</label><select id="payment-input"><option value="Pix">Pix</option><option value="Crédito">Cartão de crédito</option><option value="Débito">Cartão de débito</option><option value="Dinheiro">Dinheiro</option><option value="Transferência">Transferência</option><option value="Boleto">Boleto</option><option value="Outro">Outro</option></select></div>
       </div>
+      <button id="toggle-installments" class="more-details-toggle" type="button" aria-expanded="false">＋ Parcelar compra</button>
+      <div id="installment-fields" class="more-details-fields hidden">
+        <div class="field"><label for="installment-count">Quantidade de parcelas</label><select id="installment-count"><option value="2">2 parcelas</option><option value="3">3 parcelas</option><option value="4">4 parcelas</option><option value="5">5 parcelas</option><option value="6">6 parcelas</option><option value="7">7 parcelas</option><option value="8">8 parcelas</option><option value="9">9 parcelas</option><option value="10">10 parcelas</option><option value="11">11 parcelas</option><option value="12">12 parcelas</option><option value="18">18 parcelas</option><option value="24">24 parcelas</option><option value="36">36 parcelas</option></select></div>
+        <p class="muted">Informe o valor total da compra. A data em “Mais detalhes” será a data da primeira parcela. Ajuste a fatura inicial conforme a previsão do seu cartão.</p>
+      </div>
       <button id="toggle-more-details" class="more-details-toggle" type="button" aria-expanded="false">＋ Mais detalhes</button>
       <div id="more-details-fields" class="more-details-fields hidden"><div class="field"><label for="date-input">Data</label><input id="date-input" type="date" required></div><div class="field"><label for="description-input">Descrição (opcional)</label><input id="description-input" type="text" maxlength="100" placeholder="Ex.: supermercado"></div></div>
       <div class="field hidden" id="card-name-field"><label for="card-name-input">Cartão (opcional)</label><input id="card-name-input" type="text" maxlength="50" placeholder="Ex.: Nubank"></div>
