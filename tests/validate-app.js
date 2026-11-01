@@ -75,3 +75,22 @@ test('Cache do PWA tem versão atualizada', () => {
   assert.match(sw, /meu-bolso-shell-v23/);
 });
 
+test('Menu inferior fica fora das telas e dentro da área autenticada', () => {
+  const appView = html.indexOf('<section id="app-view"');
+  const home = html.indexOf('<section id="home-screen"');
+  const nav = html.indexOf('<nav class="home-bottom-nav"');
+  const appEnd = html.indexOf('</main>', appView);
+  assert.ok(nav > home && nav < appEnd, 'menu deve ser irmão das telas dentro da área autenticada');
+  assert.equal((html.match(/class="home-bottom-nav"/g) || []).length, 1, 'deve existir apenas um menu');
+});
+test('Menu inferior permanece fixo e considera área segura do aparelho', () => {
+  assert.match(css, /\.home-bottom-nav\{[^}]*position:fixed/);
+  assert.match(css, /\.home-bottom-nav\{[^}]*bottom:0/);
+  assert.match(css, /env\(safe-area-inset-bottom\)/);
+  assert.match(css, /#app-view\{padding-bottom:/);
+});
+test('Navegação mantém opção ativa ao alternar entre telas', () => {
+  assert.match(app, /b\.dataset\.homeNav==="more"/);
+  assert.match(app, /function showHome\(\)[\s\S]{0,500}b\.dataset\.homeNav==="home"/);
+  assert.match(app, /function showLegacy\(section\)[\s\S]{0,1000}b\.dataset\.homeNav/);
+});
