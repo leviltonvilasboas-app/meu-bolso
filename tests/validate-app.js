@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const app = fs.readFileSync('app-v2.js', 'utf8');
 const html = fs.readFileSync('index.html', 'utf8');
 const sw = fs.readFileSync('sw.js', 'utf8');
+const css = fs.readFileSync('styles.css', 'utf8');
 
 function installments(totalCents, count) {
   const base = Math.floor(totalCents / count);
