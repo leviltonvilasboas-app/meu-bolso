@@ -349,6 +349,7 @@
     $("export-button").addEventListener("click",exportCSV);
     window.addEventListener("online",()=>{setConnection("pending","Reconectando…");if(state.user)showToast("Conexão restaurada. Sincronizando alterações.");});
     window.addEventListener("offline",()=>setConnection("offline","Offline — alterações ficam pendentes"));
+    state.authPersistencePromise = firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     state.persistencePromise = firebase.firestore().enablePersistence({synchronizeTabs:true}).then(()=>{state.persistenceReady=true;}).catch(err=>{state.persistenceReady=false;if(err.code==="failed-precondition")setNotice("O armazenamento offline está ativo em outra aba. Feche as abas duplicadas do Meu Bolso para habilitá-lo aqui.","");else if(err.code==="unimplemented")setNotice("Este navegador não oferece suporte à persistência offline. O app ainda poderá funcionar enquanto estiver aberto.","");});
     firebase.auth().getRedirectResult().catch(showAuthError);
     firebase.auth().onAuthStateChanged(async user=>{
@@ -360,8 +361,18 @@
     });
     if("serviceWorker" in navigator) window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
     window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();state.deferredInstall=event;$("install-button").classList.remove("hidden");});
-    $("install-button").addEventListener("click",async()=>{if(!state.deferredInstall)return;state.deferredInstall.prompt();await state.deferredInstall.userChoice;state.deferredInstall=null;$("install-button").classList.add("hidden");});
-    window.addEventListener("appinstalled",()=>{$("install-button").classList.add("hidden");showToast("Meu Bolso instalado.");});
+    const installed=window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone===true;
+    if(installed){$("install-button").classList.add("hidden");$("install-button-login").classList.add("hidden");}
+    const installApp=async()=>{
+      if(state.deferredInstall){state.deferredInstall.prompt();const choice=await state.deferredInstall.userChoice;state.deferredInstall=null;if(choice && choice.outcome==="accepted"){$("install-button").classList.add("hidden");$("install-button-login").classList.add("hidden");}return;}
+      const ua=navigator.userAgent;let instructions;
+      if(/iPhone|iPad|iPod/i.test(ua)) instructions="Para instalar no iPhone ou iPad: toque em Compartilhar no Safari e escolha \"Adicionar à Tela de Início\". Se essa opção não aparecer, abra este endereço no Safari.";
+      else if(/Android/i.test(ua)) instructions="Para instalar no Android: abra o menu ⋮ do Chrome e toque em \"Instalar app\" ou \"Adicionar à tela inicial\". Se não aparecer, atualize a página e tente novamente no Chrome.";
+      else instructions="Para instalar: use o menu de instalação do navegador, normalmente identificado por \"Instalar Meu Bolso\" ou \"Adicionar à tela inicial\".";
+      $("install-help").textContent=instructions;$("install-help").classList.remove("hidden");
+    };
+    $("install-button").addEventListener("click",installApp);$("install-button-login").addEventListener("click",installApp);
+    window.addEventListener("appinstalled",()=>{$("install-button").classList.add("hidden");$("install-button-login").classList.add("hidden");$("install-help").classList.add("hidden");showToast("Meu Bolso instalado.");});
   }
 
   // A demonstração local deve funcionar mesmo se o Firebase falhar ao iniciar.
