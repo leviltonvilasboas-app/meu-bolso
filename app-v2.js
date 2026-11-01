@@ -36,6 +36,7 @@
   }
 
   function showLogin() {
+    document.body.classList.add("login-active");
     $("auth-loading").classList.add("hidden");
     $("login-view").classList.remove("hidden"); $("app-view").classList.add("hidden");
     $("sign-out-button").classList.add("hidden"); $("login-error").classList.add("hidden");
@@ -45,6 +46,7 @@
   }
 
   function showApp(user) {
+    document.body.classList.remove("login-active");
     $("auth-loading").classList.add("hidden");
     $("login-view").classList.add("hidden"); $("app-view").classList.remove("hidden");
     showHome();
@@ -285,21 +287,25 @@
   }
 
   async function signIn() {
-    $("login-error").classList.add("hidden"); $("google-sign-in").disabled=true;
+    $("login-error").classList.add("hidden");
+    $("google-sign-in").disabled=true;
     try {
       const provider=new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({prompt:"select_account"});
-      // No Android/iOS, o fluxo de redirecionamento é mais confiável que pop-ups,
-      // especialmente em abas personalizadas abertas por outros aplicativos.
-      const mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-      if(mobile) await firebase.auth().signInWithRedirect(provider);
-      else await firebase.auth().signInWithPopup(provider);
+      const standalone=window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone===true;
+      // Em PWA instalado, popup evita o retorno pelo domínio auxiliar firebaseapp.com,
+      // que pode ser bloqueado por políticas de armazenamento do navegador.
+      if(standalone) await firebase.auth().signInWithPopup(provider);
+      else {
+        const mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        if(mobile) await firebase.auth().signInWithRedirect(provider);
+        else await firebase.auth().signInWithPopup(provider);
+      }
     } catch(error) {
       showAuthError(error);
       $("google-sign-in").disabled=false;
     }
   }
-
   async function signOut() {
     if (state.demoMode) {
       state.demoMode = false;
