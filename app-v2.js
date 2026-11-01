@@ -39,7 +39,7 @@
     document.body.classList.add("login-active");
     $("auth-loading").classList.add("hidden");
     $("login-view").classList.remove("hidden"); $("app-view").classList.add("hidden");
-    $("sign-out-button").classList.add("hidden"); $("login-error").classList.add("hidden");
+    $("sign-out-button").classList.add("hidden");
     $("welcome-message").textContent="Acompanhe suas movimentações.";
     if (state.unsubscribe) { state.unsubscribe(); state.unsubscribe=null; }
     state.transactions=[]; render();
@@ -282,20 +282,23 @@
     else if(error.code==="auth/network-request-failed") message="Sem conexão. Para entrar pela primeira vez, conecte-se à internet.";
     else if(error.code==="auth/web-storage-unsupported") message="O navegador bloqueou o armazenamento necessário ao login. Abra o Meu Bolso diretamente no Chrome.";
     console.error("Meu Bolso Google sign-in error:", error.code || "sem código", error.message || error);
-    const diagnosticCode=error && error.code ? " (Código: "+error.code+")" : "";
-    $("login-error").textContent=message+diagnosticCode;$("login-error").classList.remove("hidden");
+    const diagnosticCode=error && error.code ? "Código: "+error.code : "Erro sem código";
+    const detail=error && error.message ? String(error.message).slice(0,220) : "";
+    $("login-error").textContent=message+" "+diagnosticCode+(detail ? " — "+detail : "");
+    $("login-error").classList.remove("hidden");
   }
 
   async function signIn() {
     $("login-error").classList.add("hidden");
     $("google-sign-in").disabled=true;
     try {
+      const auth=firebase.auth();
+      await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
       const provider=new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({prompt:"select_account"});
       const standalone=window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone===true;
-      // Em PWA instalado, popup evita o retorno pelo domínio auxiliar firebaseapp.com,
-      // que pode ser bloqueado por políticas de armazenamento do navegador.
-      if(standalone) await firebase.auth().signInWithPopup(provider);
+      // No PWA, usa popup e confirma que o Firebase devolveu um usuário autenticado.
+      if(standalone) { const credential=await auth.signInWithPopup(provider); if(!credential || !credential.user) throw new Error("O Google retornou sem uma sessão de usuário."); }
       else {
         const mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         if(mobile) await firebase.auth().signInWithRedirect(provider);
