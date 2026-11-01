@@ -6,7 +6,7 @@
   const COLORS = ["#216e50", "#75a98a", "#d69a51", "#6c91a5", "#bd6b58", "#8c80b8", "#94aa60", "#4d9b9b", "#c17d9c", "#7d8a81"];
   const ICONS = {"Alimentação":"◉","Moradia":"⌂","Transporte":"↗","Saúde":"✚","Lazer":"✦","Compras":"▤","Família":"♡","Viagens":"✈","Educação":"▣","Contas e serviços":"≋","Assinaturas":"↻","Impostos e taxas":"▧","Pets":"♧","Salário":"＋","Renda extra":"↗","Investimentos":"⌁","Reembolso":"↩","Venda":"◇","Presente":"♡","Outros":"•"};
   const $ = (id) => document.getElementById(id);
-  const state = { user: null, transactions: [], unsubscribe: null, editingId: null, pendingWrites: false, deferredInstall: null, persistenceReady: false, persistencePromise: Promise.resolve(), demoMode: false, hiddenMoney: false, shortcutDraft: [] };
+  const state = { user: null, transactions: [], unsubscribe: null, editingId: null, pendingWrites: false, deferredInstall: null, persistenceReady: false, persistencePromise: Promise.resolve(), authPersistencePromise: Promise.resolve(), demoMode: false, hiddenMoney: false, shortcutDraft: [] };
   const money = (cents) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format((Number(cents) || 0) / 100);
   const localDate = () => { const d = new Date(); return [d.getFullYear(), String(d.getMonth()+1).padStart(2,"0"), String(d.getDate()).padStart(2,"0")].join("-"); };
   const currentMonth = () => localDate().slice(0,7);
@@ -293,17 +293,14 @@
     $("google-sign-in").disabled=true;
     try {
       const auth=firebase.auth();
-      await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+      await state.authPersistencePromise;
       const provider=new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({prompt:"select_account"});
       const standalone=window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone===true;
-      // No PWA, usa popup e confirma que o Firebase devolveu um usuário autenticado.
-      if(standalone) { const credential=await auth.signInWithPopup(provider); if(!credential || !credential.user) throw new Error("O Google retornou sem uma sessão de usuário."); }
-      else {
-        const mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        if(mobile) await firebase.auth().signInWithRedirect(provider);
-        else await firebase.auth().signInWithPopup(provider);
-      }
+      // Popup é usado também no navegador móvel para evitar falhas de armazenamento
+      // de terceiros no fluxo de redirecionamento do Firebase.
+      const credential=await auth.signInWithPopup(provider);
+      if(!credential || !credential.user) throw new Error("O Google retornou sem uma sessão de usuário.");
     } catch(error) {
       showAuthError(error);
       $("google-sign-in").disabled=false;
